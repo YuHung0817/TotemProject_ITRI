@@ -1,0 +1,14 @@
+[Unit]
+Description=Totem FastAPI service
+After=network.target
+[Service]
+User=totem
+Group=totem
+WorkingDirectory=/opt/totem/backend
+EnvironmentFile=/etc/totem/totem.env
+ExecStartPre=/opt/totem/.venv/bin/python -m alembic upgrade head
+ExecStart=/opt/totem/.venv/bin/gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --bind 127.0.0.1:8000
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target

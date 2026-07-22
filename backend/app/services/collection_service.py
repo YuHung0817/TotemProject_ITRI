@@ -1,0 +1,1 @@
+FAVORITES_ID = "favorites"
