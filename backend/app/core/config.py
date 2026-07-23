@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     image_max_bytes: int = 20_000_000
     image_max_dimension: int = 8192
     image_max_pixels: int = 40_000_000
+    image_min_free_bytes: int = 2 * 1024 * 1024 * 1024
+    image_min_free_percent: float = 20.0
     data_retention_minutes: int = 14 * 24 * 60
     session_cookie_name: str = "totem_session"
     session_ttl_minutes: int = 8 * 60

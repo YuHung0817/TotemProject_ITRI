@@ -47,12 +47,18 @@ AWS_REGION=EC2 所在區域，例如 ap-northeast-1
 GENERATION_HOURLY_LIMIT=10
 GENERATION_DAILY_LIMIT=30
 GENERATION_STALE_MINUTES=10
+IMAGE_MIN_FREE_BYTES=2147483648
+IMAGE_MIN_FREE_PERCENT=20
 ```
 
 正式環境禁止直接設定 `OPENAI_API_KEY`。請先在同一 AWS Region 的 Systems Manager
 Parameter Store 建立 `/totem/production/openai-api-key` `SecureString`，並將只允許
 `ssm:GetParameter` 讀取該 parameter 的 IAM instance role 掛載至 EC2。後端會使用
 instance role 取得並解密金鑰，不需要在主機保存 AWS access key。
+
+圖片生成前會檢查 `/srv/totem-data/images` 所在 volume 的剩餘空間。預設至少保留
+2 GiB，且至少保留 volume 的 20%，兩者取較大；低於門檻時 API 會在呼叫付費圖片
+服務前回傳 `507`。可依 EBS 容量調整上述兩個環境變數，但不建議關閉保留空間。
 
 設定完成後再次執行：
 

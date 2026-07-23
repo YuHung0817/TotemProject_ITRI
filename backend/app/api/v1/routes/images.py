@@ -53,7 +53,14 @@ from app.services.generation_job_service import (
 from app.services.image_processing import create_cross_stitch_chart
 from app.services.product_preview import create_product_preview
 from app.services.product_reference_service import product_reference_path
-from app.services.storage_service import delete_image, image_path, image_url, store_image_bytes
+from app.services.storage_service import (
+    StorageCapacityError,
+    delete_image,
+    ensure_storage_capacity,
+    image_path,
+    image_url,
+    store_image_bytes,
+)
 from app.prompts.product_preview import DISPLAY_STYLE_OPTIONS, PRODUCT_PLACEMENT_OPTIONS
 from app.services.prompt_compiler import resolve_motif_revision
 
@@ -170,6 +177,29 @@ def internal_server_error(
     return HTTPException(500, "The image operation failed")
 
 
+def require_storage_capacity(
+    operation: str,
+    *,
+    image_id: str | None = None,
+) -> None:
+    try:
+        ensure_storage_capacity()
+    except StorageCapacityError as exc:
+        log_event(
+            "operation_rejected",
+            operation=operation,
+            image_id=image_id,
+            reason="storage_capacity",
+        )
+        raise HTTPException(
+            507,
+            {
+                "code": "storage_capacity_reached",
+                "message": "圖片儲存空間不足，暫時無法建立新圖片。",
+            },
+        ) from exc
+
+
 @router.post("/generate", response_model=GenerateResponse)
 def generate_images(
     request: GenerateRequest,
@@ -179,6 +209,7 @@ def generate_images(
     client_exchange_id: ClientExchangeId = None,
     db: Session = Depends(get_db),
 ) -> GenerateResponse:
+    require_storage_capacity("motif_generate")
     log_event(
         "operation_started",
         operation="motif_generate",
@@ -442,6 +473,7 @@ def preview(
     client_exchange_id: ClientExchangeId = None,
     db: Session = Depends(get_db),
 ) -> ImageRecord:
+    require_storage_capacity("product_preview", image_id=image_id)
     log_event("operation_started", operation="product_preview", image_id=image_id)
     record = find_record(db, image_id, user.id)
     job = acquire_generation_job(
@@ -484,6 +516,7 @@ def random_preview(
     client_exchange_id: ClientExchangeId = None,
     db: Session = Depends(get_db),
 ) -> ImageRecord:
+    require_storage_capacity("random_product_preview", image_id=image_id)
     record = find_record(db, image_id, user.id)
     product = random.choice(list(PRODUCT_PLACEMENT_OPTIONS))
     placement_choices = [
@@ -532,6 +565,7 @@ def preview_variant(
     client_exchange_id: ClientExchangeId = None,
     db: Session = Depends(get_db),
 ) -> ImageRecord:
+    require_storage_capacity("product_preview_variant", image_id=image_id)
     source = find_record(db, image_id, user.id)
     if request.product not in PRODUCT_PLACEMENT_OPTIONS:
         raise HTTPException(422, "Unsupported product")
@@ -580,6 +614,7 @@ def regenerate_image(
     client_exchange_id: ClientExchangeId = None,
     db: Session = Depends(get_db),
 ) -> ImageRecord:
+    require_storage_capacity("motif_regenerate", image_id=image_id)
     # Validate the source before consuming quota or taking the global generation lock.
     find_record(db, image_id, user.id)
     job = acquire_generation_job(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import shutil
 import uuid
 
 from PIL import Image, UnidentifiedImageError
@@ -13,11 +14,24 @@ PUBLIC_IMAGE_PREFIX = "/generated/images"
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
+class StorageCapacityError(RuntimeError):
+    """The configured storage volume is below its safe free-space threshold."""
+
+
 def storage_root() -> Path:
     configured = Path(get_settings().image_storage_root).expanduser()
     root = (configured if configured.is_absolute() else PROJECT_ROOT / configured).resolve()
     root.mkdir(parents=True, exist_ok=True)
     return root
+
+
+def ensure_storage_capacity(*, required_bytes: int = 0) -> None:
+    settings = get_settings()
+    usage = shutil.disk_usage(storage_root())
+    percent_threshold = int(usage.total * max(0.0, settings.image_min_free_percent) / 100)
+    reserve = max(settings.image_min_free_bytes, percent_threshold)
+    if usage.free - max(0, required_bytes) < reserve:
+        raise StorageCapacityError("Image storage is below its safe free-space threshold")
 
 
 def image_path(storage_key: str) -> Path:
@@ -59,6 +73,7 @@ def _validated_image(data: bytes) -> tuple[str, str, tuple[int, int]]:
 
 def store_image_bytes(data: bytes, *, label: str | None = None) -> str:
     _, extension, _ = _validated_image(data)
+    ensure_storage_capacity(required_bytes=len(data))
     safe_label = f"_{label}" if label and label.replace("_", "").isalnum() else ""
     storage_key = f"{uuid.uuid4().hex}{safe_label}{extension}"
     destination = image_path(storage_key)

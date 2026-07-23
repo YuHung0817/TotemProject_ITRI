@@ -217,7 +217,7 @@ expires_at = created_at（UTC）+ 14 天
 - [x] 圖片 API 與 `/generated/images/{storage_key}` 加入 Session 驗證、ownership、刪除狀態及到期檢查。
 - [x] 實作 `expires_at`、到期查詢及可重跑、預設 dry-run 的清理 job。
 - [x] 建立 systemd cleanup service/timer，並由 EC2 部署腳本安裝及啟用 timer。
-- [ ] 實作磁碟容量硬上限與剩餘空間檢查。
+- [x] 實作磁碟容量硬上限與剩餘空間檢查；預設保留 2 GiB 或 volume 的 20%（取較大），不足時在呼叫付費圖片 API 前回傳 `507`。
 - [x] UI 顯示 14 天政策、個別圖片到期時間與下載提醒，並提供下載操作。
 
 ### C. 驗證與用量保護
