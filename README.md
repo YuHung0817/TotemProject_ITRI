@@ -483,3 +483,110 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 - 不要讓 EC2 的 port 8000 對公網開放。
 - 正式環境務必更換 `SECRET_KEY`。
 - 生成 endpoint 已有登入、ownership、quota、單帳號 active job 鎖與冪等保護；部署前仍須完成敏感 Log 清理與 production bundle 機密掃描。
+
+## 商品預覽與近期行為說明（2026-07-23）
+
+### 固定商品參考圖與雙圖生成
+
+商品預覽會同時送出兩張輸入圖片給 Image API：
+
+1. 系統內建的固定商品參考圖，用來保留商品外型、比例、接縫、翻蓋、肩帶、五金與視角。
+2. 使用者目前的圖騰圖片，作為要合成到商品上的最終圖案。
+
+Image API 最後只輸出一張商品預覽照，不會輸出拼貼圖。使用者只需選擇商品、圖騰位置及商品／背景顏色，不需自行上傳商品圖。
+
+固定參考圖位於：
+
+```text
+backend/app/assets/product_references/
+```
+
+商品與安全檔名的正式對應定義在：
+
+```text
+backend/app/services/product_reference_service.py
+```
+
+目前支援的商品：
+
+| 商品 | 固定參考圖 |
+|---|---|
+| 托特包 | `tote-bag.jpg` |
+| 帆布袋 | `canvas-bag.jpg` |
+| 束口袋 | `drawstring-bag.jpg` |
+| 午餐袋 | `lunch-bag.jpg` |
+| 飲料提袋 | `beverage-carrier.jpg` |
+| 環形鑰匙圈 | `loop-key-fob.jpg` |
+| 台灣高中生側背書包 | `taiwan-school-shoulder-bag.jpg` |
+| 貝殼零錢包 | `shell-coin-purse.jpg` |
+| 圖騰織帶手機掛繩 | `phone-lanyard.jpg` |
+
+專案根目錄的 `商品參考圖/` 是原始圖片整理區，不是執行時讀取位置。新增或替換原圖後，必須：
+
+1. 複製至 `backend/app/assets/product_references/`。
+2. 改用不含空格與中文字的安全檔名。
+3. 更新 `PRODUCT_REFERENCE_FILES`。
+4. 確認 `PRODUCT_OPTIONS`、`PRODUCT_PLACEMENT_OPTIONS`、前端 `products` 與 `placementByProduct` 同步。
+
+套件封裝已透過 `backend/pyproject.toml` 的 `tool.setuptools.package-data` 納入這些 JPG 資產。
+
+### 商品位置規則
+
+- 手動選擇商品時仍可使用「AI自動決定位置」。
+- `POST /api/v1/images/{id}/preview/random` 的隨機位置會排除「AI自動決定位置」，只從該商品的具體位置中抽選。
+- 「台灣高中生側背書包」使用台灣傳統高中學生布製側背書包造型，約寬 20 cm、高 15 cm、厚 6 cm，具有大面積正面翻蓋、側片、尼龍肩帶及塑膠調節扣。
+- 該書包的指定正面位置名稱為「翻蓋偏下方」，不是「袋子中央」。
+- 「翻蓋偏下方」會將完整圖騰水平置中、垂直放在翻蓋下方約三分之一處；圖騰外框寬度約為翻蓋寬度的 20%，左右各保留至少 40% 空白，且不得貼近底邊或縫線。
+- 其他商品的「袋子中央」不受上述 20% 規則影響。
+
+商品英文描述、位置提示與特殊尺寸鎖定位於：
+
+```text
+backend/app/prompts/product_preview.py
+```
+
+雙圖送出與最終覆寫規則位於：
+
+```text
+backend/app/services/product_preview.py
+```
+
+### 聊天室滑動到期時間
+
+聊天室保存期限採滑動式 14 天，而不是建立後固定 14 天。以下操作會把聊天室及其訊息的 `expires_at` 更新為操作當下加上 `DATA_RETENTION_MINUTES`：
+
+- 開啟單一聊天室。
+- 傳送或同步聊天室內容。
+- 重新命名聊天室。
+
+單純取得聊天室列表不會延長全部聊天室。預設 `DATA_RETENTION_MINUTES=20160`，即 14 天。
+
+### 收藏圖版
+
+收藏面板的「＋」已連接建立圖版功能：
+
+- 輸入名稱後可按「＋」或 Enter 建立。
+- 名稱空白時會聚焦名稱輸入框。
+- 建立期間會阻止重複送出。
+
+### 驗證
+
+修改商品、位置或參考圖後，至少執行：
+
+```powershell
+Push-Location backend
+python -m py_compile app\prompts\product_preview.py app\services\product_preview.py app\services\product_reference_service.py app\api\v1\routes\images.py
+Pop-Location
+
+Push-Location frontend
+npm.cmd run build
+Pop-Location
+```
+
+若後端開發依賴已安裝，再執行：
+
+```powershell
+Push-Location backend
+python -m pytest
+Pop-Location
+```

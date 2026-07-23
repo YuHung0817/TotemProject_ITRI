@@ -5,7 +5,7 @@ import traceback
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, BinaryIO, Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import Response
 from openai import OpenAI
@@ -54,6 +54,7 @@ from app.services.generation_job_service import (
 )
 from app.services.image_processing import create_cross_stitch_chart
 from app.services.product_preview import create_product_preview
+from app.services.product_reference_service import product_reference_path
 from app.services.storage_service import delete_image, image_path, image_url, store_image_bytes
 from app.prompts.product_preview import DISPLAY_STYLE_OPTIONS, PRODUCT_PLACEMENT_OPTIONS
 from app.services.prompt_compiler import resolve_motif_revision
@@ -94,12 +95,29 @@ def add_preview(record: dict, request: ProductPreviewRequest, result: dict) -> N
     }
 
 
-def generate_preview_result(record: dict, request: ProductPreviewRequest) -> dict:
+def generate_preview_result(
+    record: dict,
+    request: ProductPreviewRequest,
+    product_reference: BinaryIO | None = None,
+) -> dict:
     motif_path = image_path(Path(record.get("original_filename") or record["filename"]).name)
     if not motif_path.exists():
         raise HTTPException(404, "Original motif image file not found")
     try:
-        return create_product_preview(client(), motif_path, request, 0)
+        if product_reference is None:
+            reference_path = product_reference_path(request.product)
+            if reference_path is not None:
+                with reference_path.open("rb") as reference_file:
+                    return create_product_preview(
+                        client(),
+                        motif_path,
+                        request,
+                        0,
+                        product_reference=reference_file,
+                    )
+        return create_product_preview(
+            client(), motif_path, request, 0, product_reference=product_reference
+        )
     except Exception as exc:
         traceback.print_exc()
         raise HTTPException(500, str(exc)) from exc
@@ -442,9 +460,14 @@ def random_preview(
 ) -> ImageRecord:
     record = find_record(db, image_id, user.id)
     product = random.choice(list(PRODUCT_PLACEMENT_OPTIONS))
+    placement_choices = [
+        placement
+        for placement in PRODUCT_PLACEMENT_OPTIONS[product]
+        if placement != "AI自動決定位置"
+    ]
     request = ProductPreviewRequest(
         product=product,
-        placement=random.choice(PRODUCT_PLACEMENT_OPTIONS[product]),
+        placement=random.choice(placement_choices),
         display_style=random.choice(list(DISPLAY_STYLE_OPTIONS)),
     )
     safe_print(

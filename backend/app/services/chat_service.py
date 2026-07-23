@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import uuid
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import get_settings
 from app.db.models import Chatroom, ImageAsset, ImageRecord, Message
 from app.schemas.chat import ChatroomSnapshot
 from app.services.database_catalog_service import record_to_dict
@@ -20,6 +21,16 @@ def timestamp(value: int | None) -> datetime:
 
 def message_id(chatroom_id: str, exchange_id: str, role: str) -> str:
     return uuid.uuid5(uuid.NAMESPACE_URL, f"{chatroom_id}:{exchange_id}:{role}").hex
+
+
+def touch_chatroom(room: Chatroom) -> None:
+    """Move retention to the last time the chatroom was actually used."""
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(minutes=get_settings().data_retention_minutes)
+    room.updated_at = now
+    room.expires_at = expires_at
+    for message in room.messages:
+        message.expires_at = expires_at
 
 
 def get_chatroom(db: Session, chatroom_id: str, user_id: str) -> Chatroom:
@@ -100,6 +111,7 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
         raise HTTPException(404, "Chatroom not found")
     room.title = snapshot.title.strip() or "圖騰對話"
 
+    touch_chatroom(room)
     retained_ids: set[str] = set()
     for exchange in snapshot.generationExchanges:
         created_at = timestamp(exchange.createdAt)
@@ -178,13 +190,17 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
 
     db.flush()
     reconcile_chatroom_generation_jobs(db, room.id, user_id)
-    room.updated_at = datetime.now(timezone.utc)
     db.commit()
     return chatroom_snapshot(db, room.id, user_id)
 
 
-def chatroom_snapshot(db: Session, chatroom_id: str, user_id: str) -> ChatroomSnapshot:
+def chatroom_snapshot(
+    db: Session, chatroom_id: str, user_id: str, *, touch: bool = False
+) -> ChatroomSnapshot:
     room = get_chatroom(db, chatroom_id, user_id)
+    if touch:
+        touch_chatroom(room)
+        db.commit()
     messages = sorted(room.messages, key=lambda item: (item.created_at, item.role))
     grouped: dict[tuple[str, str], dict[str, Message]] = {}
     for message in messages:
@@ -257,7 +273,7 @@ def rename_chatroom(
 ) -> ChatroomSnapshot:
     room = get_chatroom(db, chatroom_id, user_id)
     room.title = title.strip()
-    room.updated_at = datetime.now(timezone.utc)
+    touch_chatroom(room)
     db.commit()
     return chatroom_snapshot(db, room.id, user_id)
 

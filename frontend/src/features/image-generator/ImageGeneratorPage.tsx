@@ -6,7 +6,7 @@ const SERVER = API.replace(/\/api\/v1\/?$/, "");
 const products = [
   // "棒球帽","漁夫帽","圓領T-shirt","短版T-shirt","Polo衫","帽T",
   // "拉鍊帽T","飛行外套","牛仔外套","教練外套","背心",
-  "托特包","束口袋","午餐袋","飲料提袋","環形鑰匙圈",
+  "托特包","帆布袋","束口袋","午餐袋","飲料提袋","環形鑰匙圈","台灣高中生側背書包","貝殼零錢包","圖騰織帶手機掛繩",
 ];
 const autoPlacement = "AI自動決定位置";
 const placementByProduct: Record<string,string[]> = {
@@ -22,18 +22,36 @@ const placementByProduct: Record<string,string[]> = {
   // "教練外套":[autoPlacement,"左袖","右袖","口袋蓋","下擺及左右袖口"],
   // "背心":["背心整圈邊框"],
   "托特包":[autoPlacement,"袋子中央","提袋處"],
+  "帆布袋":[autoPlacement,"袋子中央","提袋處"],
   "束口袋":[autoPlacement,"袋子中央"], "午餐袋":[autoPlacement,"袋子中央","提袋"],
   "飲料提袋":["袋身／杯套本體","提把／提帶"], "環形鑰匙圈":["圖騰取代皮革帶"],
+  "台灣高中生側背書包":[autoPlacement,"翻蓋偏下方","肩帶"],
+  "貝殼零錢包":[autoPlacement,"袋身中央直條"],
+  "圖騰織帶手機掛繩":["圖騰取代整條織帶"],
 };
 const elementNames = ["山豬","山羌","山羊","水鹿","台灣黑熊","月亮","太陽","山脈","河川","鳥","小米","菖蒲","葫蘆","玉米","稻米","樹豆","茅草","星星","菱形","射耳祭"];
 const fallbackElementImage = "/elements/botton＿tent.png";
 const elementImages: Record<string, string> = {
   山豬: "/elements/botton＿山豬.svg",
   山羌: "/elements/botton＿山羌.svg",
+  山羊: "/elements/botton＿山羊.svg",
+  水鹿: "/elements/botton＿水鹿.svg",
+  台灣黑熊: "/elements/botton＿台灣黑熊.svg",
   月亮: "/elements/botton＿月亮.svg",
   太陽: "/elements/botton＿太陽.svg",
   山脈: "/elements/botton＿山脈.svg",
   河川: "/elements/botton＿河川.svg",
+  鳥: "/elements/botton＿鳥.svg",
+  小米: "/elements/botton＿小米.svg",
+  菖蒲: "/elements/botton＿菖蒲.svg",
+  葫蘆: "/elements/botton＿葫蘆.svg",
+  玉米: "/elements/botton＿玉米.svg",
+  稻米: "/elements/botton＿稻米.svg",
+  樹豆: "/elements/botton＿樹豆.svg",
+  茅草: "/elements/botton＿茅草.svg",
+  星星: "/elements/botton＿星星.svg",
+  菱形: "/elements/botton＿菱形.svg",
+  射耳祭: "/elements/botton＿射耳祭.svg",
 };
 type RevisionExchange = { id:string; createdAt?:number; user:string; sourceImage:string; reply:string; image?:ImageRecord; pending:boolean };
 type GenerationExchange = { id:string; createdAt?:number; prompt:string; elements:string[]; reply:string; images:ImageRecord[]; pending:boolean; hideUserMessage?:boolean };
@@ -157,11 +175,37 @@ const SunTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 20 20" f
 const DeerTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M18.9125 8.84412c-.0215-.04781-.0456-.09125-.0684-.13656 1.4403-1.37594-.5062-3.69907-.5062-3.69907s-.5369 1.53532-.655 2.61c-.021-.00531-.0419-.01312-.0632-.01718-1.0084-.18532-2.1693-.27157-3.6534-.27157-.6838 0-1.34.0175-1.9747.03407-.5481.01437-1.0659.02812-1.5309.02812-1.67066 0-1.9291-.21344-1.96847-.27844.00094-.815-.16031-1.58531-.46813-2.2525.53282-.76218.53907-1.83000.36532-2.28531-.14469-.37969-.41782-.42094-.52875-.42094-.07729 0-.15136.01761-.22219.05282-.10406.05125-.27156.135-.46625.24187.75656-.60937 1.76719-.66031 1.76719-.66031-1.75188-.64813-2.73469.09687-3.22844.91531.42219-1.44937 2.07031-2.07656 2.07031-2.07656-2.26906-.07875-3.07531 1.24312-3.29594 2.37062-.395.14063-.775.37844-1.12468.71188-.745.71156-.88688 1.25531-1.03719 1.83031-.1575.60313-.35344 1.35375-1.42125 2.73469-.35625.46125-.29281.86531-.22281 1.06531.1675.48094.68625.82344 1.49844.99032.01343.0028.02937.005.04375.0075-.04594 1.2187 1.55249 1.7731 1.55249 1.7731s-.52531-.9281-.14312-2.20373c.16094-.08813.37563-.11938.60344-.15219.24813-.03594.55125-.08.83375-.22594.15125 1.30376.59625 3.27346 1.88281 4.86536.05907.2996.23157 1.595-.4375 4.3896l-.14187.5929h1.90812l.11-.3132.92938-2.649.03625-.1025-.01063-.1088c-.03781-.4006-.03218-.849.00782-1.0987.39031.1084.86906.1615 1.45406.1615 1.6709 0 3.71-.4428 4.499-.6306.4072.6047 1.0825 1.1281 1.4816 1.4072-.13.4953-.3156 1.4603-.29 2.8656l.0088.4685h1.9078l.0559-.4104c.1025-.754.6247-3.4237.63-3.4506l.0266-.1353-.0469-.1291c-.3238-.8931-.3225-1.3684-.3122-1.5081.8631-1.6772.6825-3.7056.1409-4.89748Z" fill="white"/><circle cx="4.05" cy="6.07" r=".47" fill="#6E93CC"/></svg>;
 const MountainTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M14.0666 17.3333H2.3999L5.0874 9.63C6.39573 5.87667 7.0499 4 8.23323 4c1.11417 0 1.76 1.66667 2.92667 5" stroke="white" strokeLinecap="round" strokeLinejoin="round"/><path d="M5.73315 17.3332H19.0665l-3.8275-6.1175c-1.2725-2.03336-1.9083-3.0492-2.8392-3.0492-.9316 0-1.5666 1.01667-2.83915 3.0492l-1.22083 1.9508" stroke="white" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const RiverTagIcon = () => <svg className="element-tag-icon river-tag-icon" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4.42 2.22c.92 0 1.82.3 2.61.89a7.7 7.7 0 0 0-.79 1.97l-5.11.56V3.56c1.06-.92 2.21-1.34 3.29-1.34Zm8.16-.72c1.21 0 2.42.59 3.59 1.54.24.19.47.4.7.61v1.84l-8.95-.38c.58-2 2.56-3.47 4.41-3.6l.25-.01ZM6.84 6.91c-.3.7-.04.92 1.11 1.32 1.3.45 3.65.46 2.8.68-1.57.78-4.55 1.13-4.6 1.74-.05.62 5.4.91 6.39 1.89-.84.42-1.5 1.2-2.02 1.53.55.02 1.02-.13 1.47-.38 2.12-1.17 2.04-.17.58.74-.71.45-1.5.8-1.24 1.61.33.54 1.18.88 1.48 1.11h-.64c-.59-.31-1.15-.67-1.65-1.03-.39.44-.12.83.01 1.03h-1.24c-.46-.38-1-.86-.93-1.14.07-.31.73-.86 1.49-1.34-.65.15-2.08.59-2.64 1.21-.35.39-.09.93.08 1.27h-.39c-.4-.45-.76-.93-1.08-1.4-.7.39-.34 1.12-.18 1.4h-.63c-.16-1.79.91-2.42 3.46-3.15.72-.21-1.42-.99-2.39-1.35l.12-.81c-1.3-.49-3.32-1.4-4.77-1.25 1.11-.65 2.71-.66 5.85-1.13-1.12-.53-3.38-1.06-2.86-1.47.37-.29 1.56-.56 2.94-.77Z" stroke="white" strokeLinejoin="round"/></svg>;
+const WaterDeerTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.2 8.1c-2.4-2.8-4.8-2.2-5.6-.7-.7 1.4.2 4.2 4.1 4.4M16.8 8.1c2.4-2.8 4.8-2.2 5.6-.7.7 1.4-.2 4.2-4.1 4.4M7.2 7.9C7.2 4.6 9.3 3 12 3s4.8 1.6 4.8 4.9v5.2c0 4.5-2.1 8.4-4.8 8.4s-4.8-3.9-4.8-8.4V7.9ZM8.8 4.4C7.2 3.2 6.7 1.9 6.7.6M15.2 4.4c1.6-1.2 2.1-2.5 2.1-3.8M10.1 4C9 2.8 8.8 1.8 8.9.8M13.9 4c1.1-1.2 1.3-2.2 1.2-3.2" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><circle cx="10" cy="11" r=".75" fill="white"/><circle cx="14" cy="11" r=".75" fill="white"/><circle cx="12" cy="15.2" r=".9" fill="white"/></svg>;
+const GoatTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.2 2.5C8.7.8 16.8 5.3 21.5 13.8l-1.7 5.1c-5.4-.2-10.5-1.3-13.2-4.1M2.2 2.5l6 2.9-5.9 7M6.6 14.8c-.9 2-1.5 4.1-1.7 6.3" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const BearTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.7 9.1A5.1 5.1 0 1 1 9 2.7c1.9-.4 4.1-.4 6 0a5.1 5.1 0 1 1 5.3 6.4 9.8 9.8 0 0 1 1.2 4.7c0 5.2-4.3 8.7-9.5 8.7s-9.5-3.5-9.5-8.7c0-1.7.4-3.3 1.2-4.7Z" stroke="white" strokeWidth="1.4" strokeLinejoin="round"/><path d="m7.1 5.3.8.8m8.2 0 .8-.8M9.8 10.3v1.2m4.4-1.2v1.2M9.8 16.1h4.4M12 16.1v2.1" stroke="white" strokeWidth="1.4" strokeLinecap="round"/></svg>;
+const BirdTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M1.5 9.5C5.8 2.7 9.2 3.1 13 7.4c2.2 2.5 4.2 2.3 9.5-.5-.7 3.6-2 6.4-3.8 8.8l3.3-.8c-4.1 4.2-8.3 6.2-12.5 5.6-3.8-.5-6.4-4.2-8-11Z" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><circle cx="7" cy="9.7" r="1" fill="white"/></svg>;
+const MilletTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 22c1-8.8 2.4-14.8 9.4-19M6 22c2.4-6.5 5.6-10.1 11.8-12.1M4.2 22C2.8 16.2 3 11.5 1.5 9.4M6 22c3.9-5.1 7.3-5.5 11.4-.9" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><g fill="white"><ellipse cx="10.2" cy="5.4" rx="1" ry="1.7" transform="rotate(-28 10.2 5.4)"/><ellipse cx="12.9" cy="3.5" rx="1" ry="1.7" transform="rotate(20 12.9 3.5)"/><ellipse cx="15.8" cy="2.5" rx="1" ry="1.7" transform="rotate(45 15.8 2.5)"/><ellipse cx="17.3" cy="7.7" rx="1.7" ry="1" transform="rotate(12 17.3 7.7)"/><ellipse cx="19.9" cy="9.4" rx="1.7" ry="1" transform="rotate(28 19.9 9.4)"/><ellipse cx="13.4" cy="10.8" rx="1" ry="1.7" transform="rotate(40 13.4 10.8)"/><ellipse cx="16.2" cy="10.2" rx="1" ry="1.7" transform="rotate(55 16.2 10.2)"/><ellipse cx="19.2" cy="10.8" rx="1.7" ry="1" transform="rotate(15 19.2 10.8)"/></g></svg>;
+const CalamusTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.2 21.8V8.4C7.2 5 8.7 2.2 10.8.8c2.2 1.5 3.8 4.6 3.8 8.4v4.2M2.5 15.2h5c3.2 0 5.8 2.7 5.8 6v.6H7.7c-3.1 0-5.2-2.5-5.2-5.6v-1ZM13.3 21.8v-.7c0-4.8 3.4-8.4 8.2-8.4v2.8c0 3.5-2.8 6.3-6.3 6.3h-1.9Z" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M8.2 5.7h2.6L9.4 9h2.7l-1.5 3.4h2.8" stroke="white" strokeWidth="1.4" strokeLinejoin="miter"/></svg>;
+const GourdTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4.2c3.4-1.8 6.2-.6 7.3 1.5M8.2 4.7c1.3-1.6 4.5-1.7 6.2.4 1.1 1.3 1.1 3 2.4 4.1 2.7 2.1 4.2 4.2 4.2 7 0 4-3.5 6.8-8.1 6.8-4.8 0-8.4-3.3-8.4-7.7 0-2.7 1.2-4.7 1.1-6.5-.1-1.8-.4-3.1 2.6-4.1Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const CornTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 21c4.3-4.4 5.6-8 5.3-12.6 2.5 1.8 3.3 3.5 3.2 5.5M10.3 9.6C14.8 5.8 18.5 3 21.5 2.2c.8 3.5-1.4 8.5-5.3 13.3M7 21.3c3.2 1.7 7.2.6 10.4-2.7 1.6-1.7 3.1-2.8 3.3-3.5-3.4-2.4-7.9-1.5-10.8 1.3L7 19.1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const ThatchTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="6.4" cy="12" rx="4.3" ry="9.3" stroke="white" strokeWidth="1.4"/><ellipse cx="6.4" cy="12" rx="2.3" ry="6.2" stroke="white" strokeWidth="1.4"/><path d="M6.4 8.4v7.2M6.4 2.7h10.7c2.7 0 4.9 4.2 4.9 9.3s-2.2 9.3-4.9 9.3H6.4M10.1 3.1c2.3 2.2 3.5 5.2 3.5 8.9s-1.2 6.7-3.5 8.9M14.1 3.1c2.3 2.2 3.5 5.2 3.5 8.9s-1.2 6.7-3.5 8.9M18 3.4c2 2.1 3 4.9 3 8.6s-1 6.5-3 8.6" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const StarTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 1.8 3.1 6.3 7 1-5.1 4.9 1.2 7-6.2-3.3L5.8 21 7 14 1.9 9.1l7-1L12 1.8Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const DiamondTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.2" y="4.2" width="15.6" height="15.6" rx="2.5" transform="rotate(45 12 12)" stroke="white" strokeWidth="1.5"/></svg>;
+const EarFestivalTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.2 10.2C3.2 5 7.1 1.8 12 1.8c5.1 0 8.8 3.6 8.8 8.4 0 3.7-1.9 5.3-4 7.4-1.7 1.7-2 4.6-5.7 4.6-1.9 0-3.4-.7-4.5-1.8M8 10.2c0-2.5 1.7-4.2 4-4.2 2.4 0 4.1 1.8 4.1 4.1 0 1.9-.8 2.8-2.1 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const RiceTagIcon = () => <svg className="element-tag-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16.2 5.4c2.1.8 3.3 2.7 3.1 5.2l-.5 6.2M18.8 16.8c1.1-2.3 2.3-3.8 3.7-4.7-2.5 3.3-3.8 6.7-4 10.1-.3-3.1-1.4-5.4-3.4-7 2.1.6 3.3 1.7 3.7 3.3" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><g stroke="white" strokeWidth="1.2"><ellipse cx="4.2" cy="13.5" rx="1.2" ry="2" transform="rotate(25 4.2 13.5)"/><ellipse cx="6.6" cy="10.6" rx="1.2" ry="2" transform="rotate(20 6.6 10.6)"/><ellipse cx="9.4" cy="8.2" rx="1.2" ry="2" transform="rotate(8 9.4 8.2)"/><ellipse cx="12.4" cy="6.3" rx="1.2" ry="2" transform="rotate(-8 12.4 6.3)"/><ellipse cx="5.5" cy="7.2" rx="2" ry="1.2" transform="rotate(12 5.5 7.2)"/><ellipse cx="8.2" cy="4.6" rx="2" ry="1.2" transform="rotate(24 8.2 4.6)"/><ellipse cx="11.5" cy="2.9" rx="2" ry="1.2" transform="rotate(35 11.5 2.9)"/></g></svg>;
 function ElementTagIcon({name}:{name:string}) {
   if (name === "月亮") return <MoonTagIcon/>;
   if (name === "山豬") return <BoarTagIcon/>;
   if (name === "太陽") return <SunTagIcon/>;
   if (name === "山羌") return <DeerTagIcon/>;
+  if (name === "水鹿") return <WaterDeerTagIcon/>;
+  if (name === "山羊") return <GoatTagIcon/>;
+  if (name === "台灣黑熊") return <BearTagIcon/>;
+  if (name === "鳥") return <BirdTagIcon/>;
+  if (name === "小米") return <MilletTagIcon/>;
+  if (name === "菖蒲") return <CalamusTagIcon/>;
+  if (name === "葫蘆") return <GourdTagIcon/>;
+  if (name === "玉米") return <CornTagIcon/>;
+  if (name === "茅草") return <ThatchTagIcon/>;
+  if (name === "星星") return <StarTagIcon/>;
+  if (name === "菱形") return <DiamondTagIcon/>;
+  if (name === "射耳祭") return <EarFestivalTagIcon/>;
+  if (name === "稻米") return <RiceTagIcon/>;
   if (name === "山脈") return <MountainTagIcon/>;
   if (name === "河川") return <RiverTagIcon/>;
   return null;
@@ -170,8 +214,21 @@ const ImagesIcon = () => <svg className="images-icon" viewBox="0 0 24 24" aria-h
 const CollectionCover = ({urls}:{urls:string[]}) => <span className="collection-cover" aria-hidden="true">{[0,1,2].map(index => <span className={`collection-cover-slot slot-${index+1}`} key={index}>{urls[index] && <img src={`${SERVER}${urls[index]}`} alt=""/>}</span>)}</span>;
 
 function CollectionPickerPanel({collections,selectedIds,search,onSearch,onToggle,onClose,newName,onNewName,onCreate}:{collections:CollectionRecord[];selectedIds:string[];search:string;onSearch:(value:string)=>void;onToggle:(ids:string[])=>void|Promise<void>;onClose:()=>void;newName:string;onNewName:(value:string)=>void;onCreate:()=>void|Promise<void>}) {
+  const nameInputRef=useRef<HTMLInputElement>(null);
+  const [creating,setCreating]=useState(false);
   const visibleCollections=collections.filter(collection=>collection.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
-  return <div className="collection-picker-backdrop" onClick={onClose}><section className="collection-picker" onClick={event=>event.stopPropagation()}><header><strong>儲存</strong></header><label className="collection-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input value={search} onChange={event=>onSearch(event.target.value)} placeholder="搜尋"/></label><div className="collection-picker-list">{visibleCollections.map(collection=>{const selected=selectedIds.includes(collection.id);const preview=collection.preview_urls?.[0]??collection.preview_url;return <label key={collection.id}>{preview?<img className="collection-picker-thumb" src={`${SERVER}${preview}`} alt=""/>:<span className="collection-picker-thumb empty"><BookmarkIcon/></span>}<strong>{collection.name}</strong><input type="checkbox" checked={selected} onChange={()=>onToggle(selected?selectedIds.filter(id=>id!==collection.id):[...selectedIds,collection.id])}/></label>;})}</div><div className="collection-create"><button type="button" onClick={onCreate} aria-label="建立圖版">＋</button><input value={newName} onChange={event=>onNewName(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")void onCreate();}} placeholder="建立圖版"/></div></section></div>;
+  async function submitNewCollection(event:React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!newName.trim()) {
+      nameInputRef.current?.focus();
+      return;
+    }
+    if (creating) return;
+    setCreating(true);
+    try { await onCreate(); }
+    finally { setCreating(false); }
+  }
+  return <div className="collection-picker-backdrop" onClick={onClose}><section className="collection-picker" onClick={event=>event.stopPropagation()}><header><strong>儲存</strong></header><label className="collection-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input value={search} onChange={event=>onSearch(event.target.value)} placeholder="搜尋"/></label><div className="collection-picker-list">{visibleCollections.map(collection=>{const selected=selectedIds.includes(collection.id);const preview=collection.preview_urls?.[0]??collection.preview_url;return <label key={collection.id}>{preview?<img className="collection-picker-thumb" src={`${SERVER}${preview}`} alt=""/>:<span className="collection-picker-thumb empty"><BookmarkIcon/></span>}<strong>{collection.name}</strong><input type="checkbox" checked={selected} onChange={()=>onToggle(selected?selectedIds.filter(id=>id!==collection.id):[...selectedIds,collection.id])}/></label>;})}</div><form className="collection-create" onSubmit={submitNewCollection}><button type="submit" disabled={creating} aria-label={newName.trim()?"建立圖版":"輸入圖版名稱"}>{creating?"…":"＋"}</button><input ref={nameInputRef} value={newName} onChange={event=>onNewName(event.target.value)} placeholder="輸入新圖版名稱" aria-label="新圖版名稱" disabled={creating}/></form></section></div>;
 }
 
 function ImageLightbox({image,view,onView,onClose}:{image:ImageRecord;view:AssetType;onView:(view:AssetType)=>void;onClose:()=>void}) {
@@ -663,9 +720,12 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
       setRevisionExchanges(current => [...current, pendingRevision]);
       if (chatId) persistChatHistory(current => current.map(chat => chat.id === chatId ? {...chat,revisionExchanges:[...chat.revisionExchanges,pendingRevision]} : chat));
       try {
-        const data = revisionMode === "product"
-          ? await requestProtectedImage(`${API}/images/${target.id}/preview/variant`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({product:revisionProduct,placement:revisionPlacement,display_style:revisionDisplayStyle}) }, chatId ?? undefined, exchangeId)
-          : await requestProtectedImage(`${API}/images/${target.id}/regenerate`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({instruction:revisionInstruction,mode:revisionMode}) }, chatId ?? undefined, exchangeId);
+        let data:ImageRecord;
+        if (revisionMode === "product") {
+          data = await requestProtectedImage(`${API}/images/${target.id}/preview/variant`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({product:revisionProduct,placement:revisionPlacement,display_style:revisionDisplayStyle}) }, chatId ?? undefined, exchangeId);
+        } else {
+          data = await requestProtectedImage(`${API}/images/${target.id}/regenerate`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({instruction:revisionInstruction,mode:revisionMode}) }, chatId ?? undefined, exchangeId);
+        }
         const completed:Partial<RevisionExchange> = {reply:revisionMode === "product" ? "新的商品圖已完成；圖騰本身保持不變。" : "已依照你的要求產生新的圖騰；原圖與商品預覽都已保留。",image:data,pending:false};
         setRevisionExchanges(current => current.map(exchange => exchange.id === exchangeId ? {...exchange,...completed} : exchange));
         if (chatId) patchStoredRevision(chatId, exchangeId, completed);
@@ -806,7 +866,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
 
     <main className="workspace">
       {page === "favorites" ? <section className="favorites-page" onScroll={event => setTopbarScrolled(event.currentTarget.scrollTop > 8)}>{activeCollection ? favoriteImages.length === 0 ? <p className="favorites-empty">這個資料夾還沒有圖片。</p> : <div className="favorites-grid">{favoriteImages.map(asset => <GalleryAssetCard asset={asset} onChanged={updateGalleryAsset} key={`${asset.record_id}-${asset.asset_type}`}/>)}</div> : <div className="collection-folder-grid">{collectionFolders.map(folder => <button type="button" className="collection-folder-card" onClick={() => openCollection(folder)} key={folder.id}><CollectionCover urls={folder.preview_urls ?? (folder.preview_url ? [folder.preview_url] : [])}/><strong>{folder.name}</strong><small>{folder.image_count} 張圖片</small></button>)}<form className="collection-create-card" onSubmit={event => {event.preventDefault();void addCollectionFolder();}}><div className="collection-create-cover"><i/><i/><i/><button type="submit">建立</button></div><input value={folderName} onChange={event => setFolderName(event.target.value)} aria-label="新資料夾名稱" placeholder="資料夾名稱"/></form></div>}</section> : page === "images" ? <section className="favorites-page images-page" onScroll={event => setTopbarScrolled(event.currentTarget.scrollTop > 8)}>{allImages.length === 0 ? <p className="favorites-empty">還沒有圖片。</p> : <div className="favorites-grid">{allImages.map(asset => <GalleryAssetCard asset={asset} onChanged={updateGalleryAsset} key={`${asset.record_id}-${asset.asset_type}`}/>)}</div>}</section> : <section className="hero" onScroll={event => setTopbarScrolled(event.currentTarget.scrollTop > 8)}>
-        {!conversationStarted && <h1>你說，我畫！</h1>}
+        {!conversationStarted && <div className="hero-intro"><h1>你說，我畫！</h1><p>選擇元素或描述想法，開始設計圖騰。</p></div>}
         {conversationStarted && <div className="chat-thread">
           {timelineExchanges.map(item => item.kind === "revision" ? <div className="revision-exchange" key={item.exchange.id}>
             <div className="message user-message revision-user-message"><img src={`${SERVER}${item.exchange.sourceImage}`} alt="這次要求修改的原圖騰"/><p>{item.exchange.user}</p></div>
@@ -817,7 +877,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
           </div>)}
         </div>}
         <form className="composer" onSubmit={submit}>
-          {revisionTarget && <><div className="revision-context"><img src={`${SERVER}${revisionTarget.totem_url ?? revisionTarget.url}`} alt="要修改的圖騰"/><div><strong>{revisionMode === "product" ? "更換商品圖" : "修改圖騰"}</strong><span>{revisionMode === "product" ? "選擇新的載體、位置與商品背景" : revisionMode === "palette" ? "可直接送出隨機換色，或輸入指定顏色" : "描述你想如何修改這張圖騰"}</span></div><button type="button" className="close-image-button" onClick={() => setRevisionTarget(null)} aria-label="取消修改"><CloseButtonIcon /></button></div><div className="revision-mode-tags"><button type="button" className={revisionMode === "elements" ? "active" : ""} onClick={() => setRevisionMode("elements")}>更換元素</button><button type="button" className={revisionMode === "palette" ? "active" : ""} onClick={() => setRevisionMode("palette")}>更換配色</button><button type="button" className={revisionMode === "same" ? "active" : ""} onClick={() => setRevisionMode("same")}>原組合重新生成</button><button type="button" className={revisionMode === "product" ? "active" : ""} onClick={() => setRevisionMode("product")}>更換商品圖</button></div>{revisionMode === "product" && <div className="product-revision-options"><label>載體<select value={revisionProduct} onChange={event => {const value=event.target.value;setRevisionProduct(value);setRevisionPlacement(placementByProduct[value][0]);}}>{products.map(value => <option value={value} key={value}>{value}</option>)}</select></label><label>圖騰位置<select value={revisionPlacement} onChange={event => setRevisionPlacement(event.target.value)}>{placementByProduct[revisionProduct].map(value => <option value={value} key={value}>{value}</option>)}</select></label><label>商品與背景<select value={revisionDisplayStyle} onChange={event => setRevisionDisplayStyle(event.target.value)}><option>白色商品＋白底</option><option>黑色商品＋白底</option><option>深紅色商品＋白底</option><option>深綠色商品＋白底</option><option>深藍色商品＋白底</option></select></label></div>}</>}
+          {revisionTarget && <><div className="revision-context"><img src={`${SERVER}${revisionTarget.totem_url ?? revisionTarget.url}`} alt="要修改的圖騰"/><div><strong>{revisionMode === "product" ? "更換商品圖" : "修改圖騰"}</strong><span>{revisionMode === "product" ? "選擇商品、圖騰位置與商品顏色" : revisionMode === "palette" ? "可直接送出隨機換色，或輸入指定顏色" : "描述你想如何修改這張圖騰"}</span></div><button type="button" className="close-image-button" onClick={() => setRevisionTarget(null)} aria-label="取消修改"><CloseButtonIcon /></button></div><div className="revision-mode-tags"><button type="button" className={revisionMode === "elements" ? "active" : ""} onClick={() => setRevisionMode("elements")}>更換元素</button><button type="button" className={revisionMode === "palette" ? "active" : ""} onClick={() => setRevisionMode("palette")}>更換配色</button><button type="button" className={revisionMode === "same" ? "active" : ""} onClick={() => setRevisionMode("same")}>原組合重新生成</button><button type="button" className={revisionMode === "product" ? "active" : ""} onClick={() => setRevisionMode("product")}>更換商品圖</button></div>{revisionMode === "product" && <div className="product-revision-options"><label>載體<select value={revisionProduct} onChange={event => {const value=event.target.value;setRevisionProduct(value);setRevisionPlacement(placementByProduct[value][0]);}}>{products.map(value => <option value={value} key={value}>{value}</option>)}</select></label><label>圖騰位置<select value={revisionPlacement} onChange={event => setRevisionPlacement(event.target.value)}>{placementByProduct[revisionProduct].map(value => <option value={value} key={value}>{value}</option>)}</select></label><label>商品與背景<select value={revisionDisplayStyle} onChange={event => setRevisionDisplayStyle(event.target.value)}><option>白色商品＋白底</option><option>黑色商品＋白底</option><option>深紅色商品＋白底</option><option>深綠色商品＋白底</option><option>深藍色商品＋白底</option></select></label></div>}</>}
           {selected.length > 0 && <div className="composer-tags">{selected.map(name => <button type="button" onClick={() => toggle(name)} key={name}><ElementTagIcon name={name}/>{name}<span>×</span></button>)}</div>}
           <div className={`prompt-row ${revisionTarget && revisionMode === "product" ? "product-submit-row" : ""}`}>
             {(!revisionTarget || revisionMode !== "product") &&
@@ -840,7 +900,6 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
           </div>
           <div className="element-grid">{elementNames.map(name => <button type="button" className={selected.includes(name) ? "active" : ""} onClick={() => toggle(name)} aria-label={name} aria-pressed={selected.includes(name)} key={name}><img src={elementImages[name] ?? fallbackElementImage} alt="" /></button>)}</div>
         </section>}
-        {!conversationStarted && <p className="status-line">選擇元素或描述想法，開始設計圖騰。</p>}
       </section>}
     </main>
     {page !== "chat" && <nav className={`page-switch page-switch-${page}`} aria-label="快速切換圖片與收藏" onClickCapture={event => {if(pageSwitchDidSwipe.current){event.preventDefault();event.stopPropagation();pageSwitchDidSwipe.current=false;}}} onPointerDown={event => {pageSwitchStartX.current=event.clientX;pageSwitchDidSwipe.current=false;}} onPointerUp={event => {const start=pageSwitchStartX.current;pageSwitchStartX.current=null;if(start===null)return;const distance=event.clientX-start;if(distance < -24){pageSwitchDidSwipe.current=true;void openFavorites();}else if(distance > 24){pageSwitchDidSwipe.current=true;void openImages();}}} onPointerLeave={() => {pageSwitchStartX.current=null;}} onPointerCancel={() => {pageSwitchStartX.current=null;pageSwitchDidSwipe.current=false;}}><span className="page-switch-slider" aria-hidden="true"/><button type="button" className={page==="images"?"active":""} onClick={openImages} aria-label="切換到我的圖片頁面" aria-current={page==="images"?"page":undefined}><ImagesIcon /></button><button type="button" className={page==="favorites"?"active":""} onClick={openFavorites} aria-label="切換到我的收藏頁面" aria-current={page==="favorites"?"page":undefined}><BookmarkIcon /></button></nav>}

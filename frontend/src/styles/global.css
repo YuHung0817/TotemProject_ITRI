@@ -160,13 +160,15 @@ body { background:#f1f1f1; }
 .element-sheet-header strong { color:#332822; font-size:18px; }
 .element-sheet-header small { color:#8c7b72; font-size:12px; }
 .element-sheet-header button { position:absolute; top:22px; right:0; width:38px; height:38px; display:grid; place-items:center; border:1px solid #e3d9d3; border-radius:50%; background:#fff; color:#59483f; font-size:25px; line-height:1; }
-.element-grid { min-height:0; margin:0 -16px; padding:4px 16px 18px; overflow-y:auto; overscroll-behavior:contain; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:max-content; align-content:start; align-items:start; gap:10px; background:transparent; }
+.element-grid { min-height:0; margin:0 -16px; padding:4px 16px 18px; overflow:auto; overscroll-behavior:contain; display:grid; grid-template-columns:repeat(2,176px); grid-auto-rows:218px; align-content:start; align-items:start; justify-content:center; gap:10px; background:transparent; }
 .element-grid::after { content:""; grid-column:1/-1; height:calc(174px + env(safe-area-inset-bottom)); }
-.element-grid button { width:100%; min-width:0; height:auto; padding:0; overflow:hidden; display:block; line-height:0; border:2px solid transparent; border-radius:17px; background:#fff; color:#42342d; }
-.element-grid button > img { width:100%; height:auto; display:block; }
-.element-grid button.active { border-color:#6E93CC; background:#eff9fd; color:#287a9a; box-shadow:inset 0 0 0 1px #6E93CC; }
+.element-grid button { position:relative; width:176px; min-width:176px; height:218px; padding:0; overflow:hidden; display:block; line-height:0; border:0; border-radius:20px; background:#fff; color:#42342d; }
+.element-grid button > img { width:176px; height:218px; display:block; }
+.element-grid button.active { background:#eff9fd; color:#287a9a; }
+.element-grid button.active::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none; border:3px solid #4f7fc8; border-radius:20px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.45); }
 @media (hover:hover) and (pointer:fine) {
-  .element-grid button:hover { border-color:#6E93CC; background:#eff9fd; color:#287a9a; box-shadow:inset 0 0 0 1px #6E93CC; }
+  .element-grid button:hover { background:#eff9fd; color:#287a9a; }
+  .element-grid button:hover::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none; border:3px solid #4f7fc8; border-radius:20px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.45); }
 }
 @keyframes element-sheet-in { from { transform:translate(-50%,100%); } to { transform:translate(-50%,0); } }
 .composer-locked { display:grid; gap:3px; padding:13px 16px; color:#555; cursor:default; }
@@ -267,8 +269,10 @@ html,body,#root { height:100%; overflow:hidden; }
 .app-shell { height:100dvh; min-height:0; overflow:hidden; }
 .sidebar { position:fixed; top:0; left:50%; transform:translateX(-50%); width:min(100%,480px); z-index:30; background:#fff; }
 .workspace { height:100dvh; min-height:0; overflow:hidden; }
-.hero { height:100dvh; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:76px 16px 190px; scrollbar-gutter:stable; background-color:#eef7fc; background-image:url("../assets/background.png"); background-position:center; background-size:cover; background-repeat:no-repeat; }
-.hero > h1 { width:100%; margin-top:auto; text-align:center; }
+.hero { position:relative; height:100dvh; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:76px 16px 190px; scrollbar-gutter:stable; background-color:#eef7fc; background-image:url("../assets/background.png"); background-position:center; background-size:cover; background-repeat:no-repeat; }
+.hero-intro { position:absolute; inset:0; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; pointer-events:none; }
+.hero-intro h1 { margin:0; }
+.hero-intro p { margin:10px 0 0; color:#777; font-size:13px; }
 .composer { position:fixed; left:50%; bottom:max(12px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(calc(100% - 24px),456px); max-height:calc(100dvh - 76px); overflow-y:auto; z-index:40; }
 @supports not (height:100dvh) {
   .app-shell,.workspace,.hero { height:100vh; }

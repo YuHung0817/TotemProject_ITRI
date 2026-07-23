@@ -27,3 +27,6 @@ target-version = "py312"
 
 [tool.setuptools.packages.find]
 include = ["app*"]
+
+[tool.setuptools.package-data]
+app = ["assets/product_references/*.jpg"]

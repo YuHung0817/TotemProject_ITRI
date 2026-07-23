@@ -5,24 +5,36 @@ from app.prompts.product_preview import (
     build_product_mockup_prompt,
 )
 from app.schemas.image import ProductPreviewRequest
+from app.services.product_reference_service import (
+    PRODUCT_REFERENCE_FILES,
+    product_reference_path,
+)
 
 
 def test_only_current_product_preview_options_are_enabled() -> None:
     assert set(PRODUCT_OPTIONS) == {
         "托特包",
+        "帆布袋",
         "束口袋",
         "午餐袋",
         "飲料提袋",
         "環形鑰匙圈",
+        "台灣高中生側背書包",
+        "貝殼零錢包",
+        "圖騰織帶手機掛繩",
     }
     assert set(PLACEMENT_OPTIONS) == {
         "AI自動決定位置",
         "袋子中央",
+        "翻蓋偏下方",
         "提袋處",
         "提袋",
         "袋身／杯套本體",
         "提把／提帶",
         "圖騰取代皮革帶",
+        "肩帶",
+        "袋身中央直條",
+        "圖騰取代整條織帶",
     }
     assert set(DISPLAY_STYLE_OPTIONS) == {
         "白色商品＋白底",
@@ -31,6 +43,8 @@ def test_only_current_product_preview_options_are_enabled() -> None:
         "深綠色商品＋白底",
         "深藍色商品＋白底",
     }
+    assert set(PRODUCT_REFERENCE_FILES) == set(PRODUCT_OPTIONS)
+    assert all(product_reference_path(product) for product in PRODUCT_OPTIONS)
 
 
 def test_every_placement_builds_a_complete_prompt() -> None:

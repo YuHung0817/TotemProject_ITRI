@@ -26,7 +26,7 @@ def get_chatrooms(
 def get_chatroom(
     chatroom_id: str, user: CurrentUser, db: Session = Depends(get_db)
 ) -> ChatroomSnapshot:
-    return chatroom_snapshot(db, chatroom_id, user.id)
+    return chatroom_snapshot(db, chatroom_id, user.id, touch=True)
 
 
 @router.put("/{chatroom_id}", response_model=ChatroomSnapshot)

@@ -1,10 +1,17 @@
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session
 
 from app.db import Base
 from app.db.models import Chatroom, ImageRecord, Message, User
 from app.schemas.chat import ChatroomSnapshot
-from app.services.chat_service import delete_chatroom, list_chatrooms, sync_chatroom
+from app.services.chat_service import (
+    chatroom_snapshot,
+    delete_chatroom,
+    list_chatrooms,
+    sync_chatroom,
+)
 from app.services.database_catalog_service import save_record
 
 USER_ID = "single-store"
@@ -79,3 +86,26 @@ def test_sync_chatroom_splits_exchanges_and_links_images() -> None:
         room = db.get(Chatroom, "chat-1")
         assert room is not None and room.deleted_at is not None
         assert list_chatrooms(db, USER_ID) == []
+
+
+def test_using_chatroom_refreshes_expiry_but_listing_does_not() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        db.add(User(id=USER_ID, username="store"))
+        room = Chatroom(
+            id="chat-1",
+            user_id=USER_ID,
+            title="test",
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=1),
+        )
+        db.add(room)
+        db.commit()
+
+        original_expiry = room.expires_at
+        list_chatrooms(db, USER_ID)
+        db.refresh(room)
+        assert room.expires_at == original_expiry
+
+        chatroom_snapshot(db, room.id, USER_ID, touch=True)
+        db.refresh(room)
+        assert room.expires_at > original_expiry + timedelta(days=13)

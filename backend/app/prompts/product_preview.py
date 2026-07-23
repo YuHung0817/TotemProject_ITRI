@@ -14,10 +14,37 @@ PRODUCT_OPTIONS = {
     # "教練外套": "coach jacket",
     # "背心": "sleeveless open-front vest with a V-shaped neckline",
     "托特包": "canvas tote bag",
+    "帆布袋": (
+        "simple lightweight flat canvas shopping bag with a tall rectangular body, "
+        "two long narrow fabric handles, an open top, and no rigid structure"
+    ),
     "束口袋": "drawstring bag",
     "午餐袋": "insulated lunch bag with a structured fabric body, zippered top opening, and carrying handles",
     "飲料提袋": "reusable single-cup beverage carrier bag with a fabric main body wrapping the drink cup and a long narrow carrying handle",
     "環形鑰匙圈": "loop key fob with one folded strap, one metal rivet, and one silver split key ring",
+    "台灣高中生側背書包": (
+        "a traditional Taiwanese high school student shoulder bag: a compact horizontal "
+        "rectangular fabric school satchel approximately 20 cm wide, 15 cm high, and 6 cm deep. "
+        "Use durable canvas or nylon fabric with a practical, inexpensive school-uniform-accessory "
+        "appearance from Taiwan in the 1990s or early 2000s. The body is boxy but slightly soft, "
+        "with subtly rounded corners, a flat bottom, and clearly visible left and right side "
+        "gussets. One large plain rectangular front flap covers most of the bag body and provides "
+        "a broad uninterrupted surface for the uploaded motif. Use one long adjustable dark nylon "
+        "webbing shoulder strap attached at the upper left and right sides, with one simple black "
+        "plastic length-adjustment buckle. Show the complete bag in a clean front or slight "
+        "three-quarter catalog view. This is a Taiwanese fabric student school satchel, not a "
+        "leather Cambridge satchel, messenger laptop bag, modern fashion crossbody purse, camera "
+        "bag, tote bag, handbag, backpack, or briefcase. No chain strap, short handles, luxury "
+        "hardware, multiple exterior pockets, fashion branding, or invented school name"
+    ),
+    "貝殼零錢包": (
+        "small structured shell-shaped coin purse with a flat bottom, rounded dome top, "
+        "slightly gusseted fabric body, and a zipper following the curved top edge"
+    ),
+    "圖騰織帶手機掛繩": (
+        "adjustable crossbody phone lanyard made from one long flat woven textile strap, "
+        "with a strap adjuster, metal swivel clasp, connecting ring, and phone tether tab"
+    ),
 }
 
 
@@ -31,6 +58,11 @@ PLACEMENT_OPTIONS = {
     "natural. For bags and mugs, choose the cleanest visible front-facing area. Do not "
     "use an awkward, hidden, overly curved, cropped, or visually unstable placement.",
     "袋子中央": "on the center front of the bag",
+    "翻蓋偏下方": (
+        "on the lower portion of the visible front flap of the Taiwanese high school shoulder "
+        "bag. Center the motif horizontally, but place it vertically below the flap's midpoint, "
+        "around the lower third of the flap. Keep it clear of the bottom edge and all seams"
+    ),
     "提袋處": "on the visible front-facing carrying handle / shoulder strap of the tote bag. Apply the "
     "motif as one continuous textile strip running along the direction of the handle. The "
     "motif strip must occupy approximately 80% of the handle's width, leaving only narrow and "
@@ -52,9 +84,28 @@ PLACEMENT_OPTIONS = {
     "main cup-sleeve body, cup, lid, straw, or background.",
     "圖騰取代皮革帶": "replace the entire leather loop strap of the key fob with a textile strap made from "
     "the uploaded motif. The uploaded motif must become the actual structural loop "
-    "material, not a print, patch, or decoration placed on top of leather. No leather may "
-    "remain visible. Preserve the silver split key ring, the folded loop construction, and "
-    "the metal fastening rivet.",
+        "material, not a print, patch, or decoration placed on top of leather. No leather may "
+        "remain visible. Preserve the silver split key ring, the folded loop construction, and "
+        "the metal fastening rivet.",
+    "肩帶": "on the clearly visible nylon webbing shoulder strap of the traditional Taiwanese high "
+    "school student shoulder bag. Apply the motif "
+    "as one continuous textile strip running along the length of the strap. Keep the motif "
+    "entirely inside the strap edges and conform it to the strap's width, curve, folds, and "
+    "perspective. Do not place it on the bag body, opening, hardware, or background.",
+    "袋身中央直條": "as one vertical woven textile strip centered on the visible front panel of the "
+    "shell-shaped coin purse. Run the strip continuously from the curved upper seam to the "
+    "flat bottom edge, occupying approximately 20-28% of the purse's front width. Keep the "
+    "strip straight, fully inside the front panel, and realistically integrated into its "
+    "fabric, curvature, seams, lighting, and perspective. Do not place it on the zipper, "
+    "side gusset, back panel, or background.",
+    "圖騰取代整條織帶": "replace the entire long textile strap of the phone lanyard with woven fabric "
+    "made from the uploaded motif. Repeat the motif cleanly along the full length of the strap "
+    "while preserving its exact design, colors, proportions, and orientation. The motif must "
+    "be woven into the actual structural strap material, not printed as a small logo, patch, "
+    "or floating decoration. Keep the strap width consistent and show enough of its full loop "
+    "to make the product recognizable. Preserve the strap adjuster, metal swivel clasp, "
+    "connecting ring, and phone tether tab. Do not apply the motif to the phone, metal hardware, "
+    "plastic tab, or background.",
 }
 
 # Disabled placement options retained for possible future re-enabling.
@@ -232,15 +283,22 @@ DISPLAY_STYLE_OPTIONS = {
 # Only placements that make sense for each currently enabled product.
 PRODUCT_PLACEMENT_OPTIONS = {
     "托特包": ["AI自動決定位置", "袋子中央", "提袋處"],
+    "帆布袋": ["AI自動決定位置", "袋子中央", "提袋處"],
     "束口袋": ["AI自動決定位置", "袋子中央"],
     "午餐袋": ["AI自動決定位置", "袋子中央", "提袋"],
     "飲料提袋": ["袋身／杯套本體", "提把／提帶"],
     "環形鑰匙圈": ["圖騰取代皮革帶"],
+    "台灣高中生側背書包": ["AI自動決定位置", "翻蓋偏下方", "肩帶"],
+    "貝殼零錢包": ["AI自動決定位置", "袋身中央直條"],
+    "圖騰織帶手機掛繩": ["圖騰取代整條織帶"],
 }
 
 
 def build_product_mockup_prompt(request: Any, variant_index: int) -> str:
     product_text = PRODUCT_OPTIONS.get(request.product, request.product)
+    # Keep previously saved requests compatible after the product's display-name correction.
+    if request.product == "復古側背書包":
+        product_text = PRODUCT_OPTIONS["台灣高中生側背書包"]
     placement_text = PLACEMENT_OPTIONS.get(request.placement, request.placement)
     display_style_text = DISPLAY_STYLE_OPTIONS.get(
         request.display_style,
@@ -249,6 +307,45 @@ def build_product_mockup_prompt(request: Any, variant_index: int) -> str:
     # The main UI text belongs to motif generation; preview requirements are separate.
     user_text = request.preview_prompt.strip()
     placement_lock_text = ""
+    product_lock_text = ""
+    if request.product in {"台灣高中生側背書包", "復古側背書包"}:
+        product_lock_text = """
+STRICT TAIWANESE HIGH SCHOOL SHOULDER BAG SHAPE LOCK:
+
+- Use a landscape rectangular bag body measuring visually about 20 W x 15 H x 6 D.
+- Keep the body wider than it is tall, with a width-to-height ratio near 4:3.
+- Show a flat bottom, softly rounded top corners, and a clearly visible 6 cm side gusset.
+- The front must have one large plain rectangular flap covering most of the bag body.
+- Keep that flap broad, uninterrupted, and clearly visible for motif placement.
+- Use one long adjustable dark nylon-webbing shoulder strap attached at both upper sides.
+- Include one simple black plastic length-adjustment buckle on the strap.
+- The result must feel like a practical Taiwanese high-school uniform accessory from the
+  1990s or early 2000s, made from durable fabric rather than leather.
+- Do not generate a leather Cambridge satchel, laptop messenger bag, modern purse, camera
+  bag, envelope pouch, backpack, tote bag, phone pouch, chain bag, or luxury handbag.
+- Do not add short handles, chain straps, multiple exterior pockets, fashion branding,
+  an invented school name, luxury hardware, or decorative ornaments.
+""".strip()
+        if request.placement == "翻蓋偏下方":
+            product_lock_text += """
+
+STRICT LOWER-FLAP MOTIF POSITION AND SCALE:
+
+- Place one complete motif below the vertical midpoint, around the lower third of the flap.
+- Center the motif horizontally, but do NOT center it vertically on the entire flap.
+- Measure the visible front flap from its left edge to its right edge.
+- The motif's complete outer bounding box must be approximately 20% of that flap width.
+- In other words, the motif must be visibly small: about one fifth of the flap width.
+- Preserve the motif's aspect ratio; derive its height proportionally from that 20% width.
+- Leave generous, even, clearly visible blank flap fabric around all sides of the motif.
+- At least 40% of the flap width must remain blank on both the left and right sides.
+- Keep a clear fabric margin between the motif and the flap's bottom edge and seams.
+- Do not interpret 20% as a margin, scale reduction, or empty-space percentage.
+- Do not enlarge the motif beyond 20% of the flap width, especially not to 80%.
+- Do not fill most of the flap, turn it into an
+  all-over print, repeat it across the flap, or let it touch any flap edge or seam.
+- Scale the motif uniformly without stretching, cropping, or changing its proportions.
+""".rstrip()
     if request.placement == "帽簷":
         placement_lock_text = """
 STRICT BASEBALL-CAP VISOR PERPENDICULAR PLACEMENT LOCK:
@@ -730,6 +827,8 @@ Placement:
 {placement_text}
 
 {placement_lock_text}
+
+{product_lock_text}
 
 The motif should look physically attached to the product as one of these:
 
