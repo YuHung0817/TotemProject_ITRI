@@ -28,6 +28,10 @@ fi
 
 id -u "${APP_USER}" >/dev/null 2>&1 || useradd --system --home "${APP_DIR}" --shell /usr/sbin/nologin "${APP_USER}"
 chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
+install -d -m 0750 -o "${APP_USER}" -g "${APP_USER}" \
+  /srv/totem-data \
+  /srv/totem-data/images \
+  /srv/totem-data/temp
 
 sudo -u "${APP_USER}" python3 -m venv "${APP_DIR}/.venv"
 sudo -u "${APP_USER}" "${APP_DIR}/.venv/bin/pip" install --upgrade pip
@@ -43,12 +47,15 @@ if [[ ! -f "${ENV_FILE}" ]]; then
 fi
 
 install -m 0644 "${APP_DIR}/deploy/systemd/totem-api.service" /etc/systemd/system/totem-api.service
+install -m 0644 "${APP_DIR}/deploy/systemd/totem-cleanup.service" /etc/systemd/system/totem-cleanup.service
+install -m 0644 "${APP_DIR}/deploy/systemd/totem-cleanup.timer" /etc/systemd/system/totem-cleanup.timer
 install -m 0644 "${APP_DIR}/deploy/nginx/totem.conf" /etc/nginx/sites-available/totem
 ln -sfn /etc/nginx/sites-available/totem /etc/nginx/sites-enabled/totem
 rm -f /etc/nginx/sites-enabled/default
 
 systemctl daemon-reload
 systemctl enable --now totem-api
+systemctl enable --now totem-cleanup.timer
 nginx -t
 systemctl enable --now nginx
 systemctl reload nginx
