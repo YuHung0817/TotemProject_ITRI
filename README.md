@@ -34,7 +34,6 @@
 - 新增 Log 安全測試，確認輸出與錯誤回應不含 API Token、Session Token、Cookie、密碼或測試用敏感標記。
 - 建置並掃描前端 production bundle 與原始碼，確認沒有 `OPENAI_API_KEY`、疑似 `sk-...` Token 或後端機密。
 - 正式網域完成後設定 `SESSION_COOKIE_SECURE=true`，並進行完整 HTTPS／Cookie 驗收。
-- EC2 的 systemd cleanup service/timer。
 - 將 SQLite 與圖片移至 EC2 持久資料目錄。
 - AWS Parameter Store、IAM role、HTTPS、正式網域與 Nginx/systemd 驗證。
 
@@ -443,7 +442,9 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 - [EC2 部署步驟](docs/deployment.md)
 - [EC2 自動安裝腳本](deploy/setup-ec2.sh)
 - [Nginx 設定](deploy/nginx/totem.conf)
-- [systemd service](deploy/systemd/totem-api.service)
+- [FastAPI systemd service](deploy/systemd/totem-api.service)
+- [14 天清理 systemd service](deploy/systemd/totem-cleanup.service)
+- [每日清理 systemd timer](deploy/systemd/totem-cleanup.timer)
 - [架構決策](docs/architecture.md)
 
 正式環境建議：
@@ -454,14 +455,14 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 4. Security Group 不開放 8000。
 5. 使用 HTTPS 與限制來源的 SSH。
 6. 將機密放在 `/etc/totem/totem.env` 或 AWS Systems Manager Parameter Store。
-7. SQLite 與圖片放在 `/srv/totem-data`，程式碼放在 `/opt/totem-app`。
+7. SQLite 與圖片放在 `/srv/totem-data`，程式碼放在 `/opt/totem`。
 8. FastAPI 維持單一 worker；目前不需要 S3 或 RDS。
 
 ### 部署階段建議
 
 - 可先部署只有開發者使用、資料可清除的私人 staging，以驗證 HTTPS、CORS、Nginx、環境變數、手機 UI 與 OpenAI API。
 - SQLite 部署維持單一 backend worker，資料與圖片依產品規則只保留 14 天。
-- 單一商家登入、Session Cookie、私有 API ownership 與清理 CLI 已完成；對外公開前仍須完成 HTTPS／Secure Cookie 驗收，以及啟用 EC2 systemd cleanup timer。
+- 單一商家登入、Session Cookie、私有 API ownership 與清理 CLI 已完成；EC2 部署腳本會安裝並啟用 systemd cleanup timer。對外公開前仍須完成 HTTPS／Secure Cookie 驗收，並在 EC2 實測 timer。
 - 未來只有在需要多 worker、多台 EC2、長期保存或備份時，才遷移至 PostgreSQL/RDS 與 S3。
 
 ## 目前限制與後續工作
@@ -473,7 +474,7 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 - 圖片生成目前是同步請求；生成時間變長後應加入背景工作佇列。
 - 生成鎖、額度、圖片、收藏、聊天室與生成工作均使用 Session 對應的實際登入者 ID。
 - 已提供單一帳號 CLI 初始化方式，但尚未建立圖形化管理後台或密碼重設流程。
-- 14 天資料與圖片清理服務及 CLI 已完成；本機可使用 `python -m app.cleanup` 預覽，確認後以 `python -m app.cleanup --execute` 刪除。EC2 的 systemd cleanup service/timer 尚待建立並啟用。
+- 14 天資料與圖片清理服務及 CLI 已完成；本機可使用 `python -m app.cleanup` 預覽，確認後以 `python -m app.cleanup --execute` 刪除。EC2 的 systemd cleanup service/timer 已建立並接入部署腳本，正式主機建立後仍須驗證排程、重跑與開機恢復。
 - 上線前應加入 HTTPS、CloudWatch logs 與基本監控告警；依本專案決策不做資料備份。
 
 ## 安全注意事項

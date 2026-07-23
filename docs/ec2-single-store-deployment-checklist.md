@@ -136,7 +136,7 @@ expires_at = created_at（UTC）+ 14 天
 建議路徑：
 
 ```text
-/opt/totem-app/                 程式碼與前端 build
+/opt/totem/                     程式碼與前端 build
 /srv/totem-data/app.db          SQLite
 /srv/totem-data/images/         圖片
 /srv/totem-data/temp/           暫存檔
@@ -216,7 +216,7 @@ expires_at = created_at（UTC）+ 14 天
 - [x] 使用 UUID 檔名並驗證輸出 MIME、大小與尺寸。
 - [x] 圖片 API 與 `/generated/images/{storage_key}` 加入 Session 驗證、ownership、刪除狀態及到期檢查。
 - [x] 實作 `expires_at`、到期查詢及可重跑、預設 dry-run 的清理 job。
-- [ ] 建立並啟用 systemd cleanup service/timer。
+- [x] 建立 systemd cleanup service/timer，並由 EC2 部署腳本安裝及啟用 timer。
 - [ ] 實作磁碟容量硬上限與剩餘空間檢查。
 - [x] UI 顯示 14 天政策、個別圖片到期時間與下載提醒，並提供下載操作。
 
@@ -242,7 +242,7 @@ expires_at = created_at（UTC）+ 14 天
 - [ ] 設定 IMDSv2 required。
 - [ ] 建立只允許讀取指定 Parameter Store secret 的 IAM instance role。
 - [ ] 將 GAI Token 寫入 Parameter Store `SecureString`。
-- [ ] 建立 `/opt/totem-app` 與 `/srv/totem-data`，設定專用帳號與權限。
+- [x] 部署腳本建立 `/srv/totem-data`、圖片及暫存目錄，並設定 `totem` 專用帳號與 `0750` 權限；`/opt/totem` 由第一次部署步驟建立。
 - [ ] 安裝並設定 Nginx、FastAPI systemd service 與單一 worker。
 - [ ] 設定正式 DNS、HTTPS 與憑證自動續期。
 - [ ] 設定 systemd journal／Nginx log retention，避免無限增長。
