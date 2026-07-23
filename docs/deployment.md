@@ -41,11 +41,18 @@ IMAGE_STORAGE_ROOT=/srv/totem-data/images
 CORS_ORIGINS=https://你的網域
 SESSION_COOKIE_SECURE=true
 SESSION_TTL_MINUTES=480
-OPENAI_API_KEY=你的金鑰
+OPENAI_API_KEY=
+OPENAI_API_KEY_PARAMETER_NAME=/totem/production/openai-api-key
+AWS_REGION=EC2 所在區域，例如 ap-northeast-1
 GENERATION_HOURLY_LIMIT=10
 GENERATION_DAILY_LIMIT=30
 GENERATION_STALE_MINUTES=10
 ```
+
+正式環境禁止直接設定 `OPENAI_API_KEY`。請先在同一 AWS Region 的 Systems Manager
+Parameter Store 建立 `/totem/production/openai-api-key` `SecureString`，並將只允許
+`ssm:GetParameter` 讀取該 parameter 的 IAM instance role 掛載至 EC2。後端會使用
+instance role 取得並解密金鑰，不需要在主機保存 AWS access key。
 
 設定完成後再次執行：
 

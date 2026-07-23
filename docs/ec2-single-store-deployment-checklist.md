@@ -242,6 +242,7 @@ expires_at = created_at（UTC）+ 14 天
 - [ ] 設定 IMDSv2 required。
 - [ ] 建立只允許讀取指定 Parameter Store secret 的 IAM instance role。
 - [ ] 將 GAI Token 寫入 Parameter Store `SecureString`。
+- [x] 後端支援使用 EC2 instance role 從指定 Region 的 Parameter Store 解密讀取 GAI Token；production 拒絕直接使用明文環境變數金鑰。
 - [x] 部署腳本建立 `/srv/totem-data`、圖片及暫存目錄，並設定 `totem` 專用帳號與 `0750` 權限；`/opt/totem` 由第一次部署步驟建立。
 - [ ] 安裝並設定 Nginx、FastAPI systemd service 與單一 worker。
 - [ ] 設定正式 DNS、HTTPS 與憑證自動續期。

@@ -12,8 +12,8 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import CurrentUser
-from app.core.config import get_settings
 from app.core.console import safe_print
+from app.core.secrets import SecretConfigurationError, get_openai_api_key
 from app.db.session import get_db
 from app.schemas.image import (
     AssetCollectionsRequest,
@@ -145,10 +145,13 @@ def gallery_asset(record: dict, asset_type: str, asset: dict) -> GalleryAsset:
 
 
 def client() -> OpenAI:
-    settings = get_settings()
-    if not settings.openai_api_key:
+    try:
+        api_key = get_openai_api_key()
+    except SecretConfigurationError as exc:
+        raise HTTPException(503, "Image generation is temporarily unavailable") from exc
+    if not api_key:
         raise HTTPException(400, "OPENAI_API_KEY is not set in the project .env file")
-    return OpenAI(api_key=settings.openai_api_key)
+    return OpenAI(api_key=api_key)
 
 
 @router.post("/generate", response_model=GenerateResponse)

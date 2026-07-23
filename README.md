@@ -454,7 +454,7 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 3. FastAPI 只監聽 `127.0.0.1:8000`。
 4. Security Group 不開放 8000。
 5. 使用 HTTPS 與限制來源的 SSH。
-6. 將機密放在 `/etc/totem/totem.env` 或 AWS Systems Manager Parameter Store。
+6. 本機開發金鑰放在 Git 忽略的 `.env`；正式環境只在 `/etc/totem/totem.env` 設定 Parameter Store 名稱與 AWS Region，實際金鑰存放於 AWS Systems Manager Parameter Store `SecureString`，並由 EC2 IAM instance role 讀取。
 7. SQLite 與圖片放在 `/srv/totem-data`，程式碼放在 `/opt/totem`。
 8. FastAPI 維持單一 worker；目前不需要 S3 或 RDS。
 
