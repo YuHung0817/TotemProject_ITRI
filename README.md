@@ -18,7 +18,7 @@
 - 每小時／每日生成額度，涵蓋圖片生成、商品預覽與重新生成。
 - SQLite foreign keys、WAL、`synchronous=FULL` 與 busy timeout。
 - 集中式 storage service；圖片使用 UUID 檔名，寫入前驗證格式、MIME、大小、尺寸及路徑安全。
-- `IMAGE_STORAGE_ROOT` 控制圖片根目錄；相對路徑固定以專案根目錄解析。本機使用 `backend/data/images`，EC2 使用 `/srv/totem-data/images`。
+- `IMAGE_STORAGE_ROOT` 控制圖片根目錄；相對路徑固定以專案根目錄解析。本機使用 `backend/data/images`，EC2 使用 `/srv/safu-data/images`。
 - `expires_at` 與可重跑 cleanup job；預設 dry-run，確認後才可用 `--execute` 實際清除到期資料與圖片。
 - 舊 JSON catalog、JSON 匯入程式及聊天 localStorage 匯入程式均已移除。
 - 單一商家帳號初始化、Argon2id 密碼 hash、伺服器端 Session，以及登入／狀態／登出 API。
@@ -437,10 +437,10 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 
 - [EC2 部署步驟](docs/deployment.md)
 - [EC2 自動安裝腳本](deploy/setup-ec2.sh)
-- [Nginx 設定](deploy/nginx/totem.conf)
-- [FastAPI systemd service](deploy/systemd/totem-api.service)
-- [14 天清理 systemd service](deploy/systemd/totem-cleanup.service)
-- [每日清理 systemd timer](deploy/systemd/totem-cleanup.timer)
+- [Nginx 設定](deploy/nginx/safu.conf)
+- [FastAPI systemd service](deploy/systemd/safu-api.service)
+- [14 天清理 systemd service](deploy/systemd/safu-cleanup.service)
+- [每日清理 systemd timer](deploy/systemd/safu-cleanup.timer)
 - [架構決策](docs/architecture.md)
 
 正式環境建議：
@@ -450,8 +450,8 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 3. FastAPI 只監聽 `127.0.0.1:8000`。
 4. Security Group 不開放 8000。
 5. 使用 HTTPS 與限制來源的 SSH。
-6. 本機開發金鑰放在 Git 忽略的 `.env`；正式環境只在 `/etc/totem/totem.env` 設定 Parameter Store 名稱與 AWS Region，實際金鑰存放於 AWS Systems Manager Parameter Store `SecureString`，並由 EC2 IAM instance role 讀取。
-7. SQLite 與圖片放在 `/srv/totem-data`，程式碼放在 `/opt/totem`。
+6. 本機開發金鑰放在 Git 忽略的 `.env`；正式環境只在 `/etc/safu/safu.env` 設定 Parameter Store 名稱與 AWS Region，實際金鑰存放於 AWS Systems Manager Parameter Store `SecureString`，並由 EC2 IAM instance role 讀取。
+7. SQLite 與圖片放在 `/srv/safu-data`，程式碼放在 `/opt/safu`。
 8. FastAPI 維持單一 worker；目前不需要 S3 或 RDS。
 
 ### 部署階段建議
@@ -466,7 +466,7 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 - 原型程式的完整文化元素、Prompt 規則與圖片處理演算法已拆入對應模組；後續修改應保留重構前後行為測試。
 - SQLite 適用於目前的單一商家與單一 worker；不支援未來直接水平擴充成多台寫入。
 - 登入與 Session 驗證已完成；正式部署仍須使用 HTTPS、`SESSION_COOKIE_SECURE=true` 並驗證正式網域 Origin。
-- 圖片目前存在本機檔案系統；EC2 上應移到 `/srv/totem-data/images`。
+- 圖片目前存在本機檔案系統；EC2 上應移到 `/srv/safu-data/images`。
 - 圖片生成目前是同步請求；生成時間變長後應加入背景工作佇列。
 - 生成鎖、額度、圖片、收藏、聊天室與生成工作均使用 Session 對應的實際登入者 ID。
 - 已提供單一帳號 CLI 初始化方式，但尚未建立圖形化管理後台或密碼重設流程。

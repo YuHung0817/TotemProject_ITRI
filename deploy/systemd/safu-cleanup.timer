@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Safu expired-data cleanup daily
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=10m
+Unit=safu-cleanup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Safu FastAPI service
+After=network.target
+[Service]
+User=safu
+Group=safu
+WorkingDirectory=/opt/safu/backend
+EnvironmentFile=/etc/safu/safu.env
+ExecStartPre=/opt/safu/.venv/bin/python -m alembic upgrade head
+ExecStart=/opt/safu/.venv/bin/gunicorn app.main:app -k uvicorn.workers.UvicornWorker --workers 1 --bind 127.0.0.1:8000
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target

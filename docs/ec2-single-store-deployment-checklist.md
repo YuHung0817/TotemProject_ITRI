@@ -136,15 +136,15 @@ expires_at = created_at（UTC）+ 14 天
 建議路徑：
 
 ```text
-/opt/totem/                     程式碼與前端 build
-/srv/totem-data/app.db          SQLite
-/srv/totem-data/images/         圖片
-/srv/totem-data/temp/           暫存檔
+/opt/safu/                      程式碼與前端 build
+/srv/safu-data/app.db           SQLite
+/srv/safu-data/images/          圖片
+/srv/safu-data/temp/            暫存檔
 ```
 
-- 程式碼與持久資料必須分開，部署不得覆蓋 `/srv/totem-data`。
-- 服務使用無登入 shell 的專用 `totem` OS 帳號。
-- `/srv/totem-data` 僅允許 `totem` 服務帳號存取，建議權限 `750`，檔案依需要使用更嚴格權限。
+- 程式碼與持久資料必須分開，部署不得覆蓋 `/srv/safu-data`。
+- 服務使用無登入 shell 的專用 `safu` OS 帳號。
+- `/srv/safu-data` 僅允許 `safu` 服務帳號存取，建議權限 `750`，檔案依需要使用更嚴格權限。
 - EBS 啟用靜態加密。
 - 即使決定不備份，仍建議將 data volume 的 `DeleteOnTermination` 設為 `false`，避免誤終止 instance 就立即刪除磁碟；這是降低誤操作，不是備份。
 - 設定容量上限及警報，磁碟接近滿載時停止接受新生成，不能等寫入失敗才處理。
@@ -212,7 +212,7 @@ expires_at = created_at（UTC）+ 14 天
 ### B. 圖片儲存與生命週期
 
 - [x] 建立 storage service，集中處理路徑、儲存、metadata 讀取及刪除。
-- [ ] 將 storage root 設為 `/srv/totem-data/images`，不得硬編碼在 route。
+- [ ] 將 storage root 設為 `/srv/safu-data/images`，不得硬編碼在 route。
 - [x] 使用 UUID 檔名並驗證輸出 MIME、大小與尺寸。
 - [x] 圖片 API 與 `/generated/images/{storage_key}` 加入 Session 驗證、ownership、刪除狀態及到期檢查。
 - [x] 實作 `expires_at`、到期查詢及可重跑、預設 dry-run 的清理 job。
@@ -223,7 +223,7 @@ expires_at = created_at（UTC）+ 14 天
 ### C. 驗證與用量保護
 
 - [x] 建立單一帳號 CLI 初始化方式，不提供公開註冊 endpoint。
-- [ ] EC2 第一次部署時，以 `totem` 服務帳號執行 `python -m app.manage_user create` 建立正式商家帳號；後續更新不得重複初始化。
+- [ ] EC2 第一次部署時，以 `safu` 服務帳號執行 `python -m app.manage_user create` 建立正式商家帳號；後續更新不得重複初始化。
 - [x] 加入 Argon2id 密碼 hash 與伺服器端 session；資料庫只保存 Session Token hash。
 - [x] 加入 HttpOnly／SameSite Cookie、Origin-based CSRF 防護與登入失敗限流；正式環境須設定 Secure Cookie。
 - [x] 除健康檢查、登入與開發文件外，所有非公開 API 及圖片檔案預設拒絕未登入請求，並驗證 ownership。
@@ -239,11 +239,11 @@ expires_at = created_at（UTC）+ 14 天
 ### D. AWS 與部署
 
 - [ ] 建立 EC2、加密 EBS、固定公網位址及最小權限 Security Group。
-- [ ] 設定 IMDSv2 required。
-- [ ] 建立只允許讀取指定 Parameter Store secret 的 IAM instance role。
-- [ ] 將 GAI Token 寫入 Parameter Store `SecureString`。
+- [x] 設定 IMDSv2 required。
+- [x] 建立只允許讀取指定 Parameter Store secret 的 IAM instance role。
+- [x] 將 GAI Token 寫入 Parameter Store `SecureString`。
 - [x] 後端支援使用 EC2 instance role 從指定 Region 的 Parameter Store 解密讀取 GAI Token；production 拒絕直接使用明文環境變數金鑰。
-- [x] 部署腳本建立 `/srv/totem-data`、圖片及暫存目錄，並設定 `totem` 專用帳號與 `0750` 權限；`/opt/totem` 由第一次部署步驟建立。
+- [x] 部署腳本建立 `/srv/safu-data`、圖片及暫存目錄，並設定 `safu` 專用帳號與 `0750` 權限；`/opt/safu` 由第一次部署步驟建立。
 - [ ] 安裝並設定 Nginx、FastAPI systemd service 與單一 worker。
 - [ ] 設定正式 DNS、HTTPS 與憑證自動續期。
 - [ ] 設定 systemd journal／Nginx log retention，避免無限增長。

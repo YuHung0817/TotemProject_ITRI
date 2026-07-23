@@ -1,0 +1,12 @@
+[Unit]
+Description=Delete expired Safu data and image files
+After=network.target safu-api.service
+
+[Service]
+Type=oneshot
+User=safu
+Group=safu
+WorkingDirectory=/opt/safu/backend
+EnvironmentFile=/etc/safu/safu.env
+ExecStart=/opt/safu/.venv/bin/python -m app.cleanup --execute
+UMask=0027
