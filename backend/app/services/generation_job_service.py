@@ -235,7 +235,11 @@ def fail_generation_job(db: Session, job_id: str, error: Exception) -> None:
         return
     now = utc_now()
     job.status = "failed"
-    job.error_message = str(error)[:500]
+    job.error_message = (
+        str(error.detail)[:500]
+        if isinstance(error, HTTPException) and error.status_code < 500
+        else "圖片生成失敗，請稍後重試。"
+    )
     job.finished_at = now
     job.updated_at = now
     db.add(

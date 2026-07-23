@@ -228,13 +228,13 @@ expires_at = created_at（UTC）+ 14 天
 - [x] 加入 HttpOnly／SameSite Cookie、Origin-based CSRF 防護與登入失敗限流；正式環境須設定 Secure Cookie。
 - [x] 除健康檢查、登入與開發文件外，所有非公開 API 及圖片檔案預設拒絕未登入請求，並驗證 ownership。
 - [x] 建立生成工作狀態、idempotency、單帳號唯一 active job 與每小時／每日硬上限。
-- [ ] 盤點 `safe_print`、`print`、traceback 與 HTTP 錯誤回應，建立允許保留的 Log 欄位清單。
-- [ ] 移除完整 Prompt、修改指令與完整 request body Log，改記錄 operation、job/image ID、狀態、耗時、字數及數量等安全摘要。
-- [ ] 一般化對外 `500` 錯誤訊息，不回傳第三方 SDK 原始例外、內部檔案路徑或資料庫細節。
-- [ ] 確認程式不記錄 API Token、Session Token、Cookie、密碼或完整 request headers。
-- [ ] 新增 Log 安全自動測試，以敏感標記確認 stdout/stderr 與錯誤回應不洩漏內容。
-- [ ] 建置並掃描前端 production bundle、前端原始碼與公開資源，確認不存在 `OPENAI_API_KEY` 或疑似 API Token。
-- [ ] 掃描版本控制內檔案，確認 API Token 不存在 repository；`.env` 必須維持忽略且不得納入掃描結果作為可提交內容。
+- [x] 盤點 `safe_print`、`print`、traceback 與 HTTP 錯誤回應，Log 僅允許 operation、job/image ID、狀態、錯誤類型、字數及數量等安全摘要。
+- [x] 移除完整 Prompt、修改指令、完整 request body、圖片 URL 與 traceback Log。
+- [x] 一般化對外 `500` 錯誤訊息，不回傳第三方 SDK 原始例外、內部檔案路徑或資料庫細節。
+- [x] 確認程式不記錄 API Token、Session Token、Cookie、密碼或完整 request headers。
+- [x] 新增 Log 安全自動測試，以敏感標記確認 stdout/stderr 與錯誤回應不洩漏內容。
+- [x] 建置並掃描前端 production bundle、前端原始碼與公開資源，確認不存在 `OPENAI_API_KEY` 或疑似 API Token。
+- [x] 掃描版本控制內檔案，確認 API Token 不存在 repository；`.env` 維持忽略且未被版本控制追蹤。
 
 ### D. AWS 與部署
 

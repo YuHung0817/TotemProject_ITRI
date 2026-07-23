@@ -29,10 +29,6 @@
 
 部署前尚待完成：
 
-- 盤點並整理後端 Log：移除完整 Prompt、修改指令與完整 request body，只保留 operation、job/image ID、狀態、耗時、字數及數量等安全摘要。
-- 一般化對外 `500` 錯誤訊息，不將第三方 SDK、檔案路徑、資料庫細節或原始例外完整回傳前端。
-- 新增 Log 安全測試，確認輸出與錯誤回應不含 API Token、Session Token、Cookie、密碼或測試用敏感標記。
-- 建置並掃描前端 production bundle 與原始碼，確認沒有 `OPENAI_API_KEY`、疑似 `sk-...` Token 或後端機密。
 - 正式網域完成後設定 `SESSION_COOKIE_SECURE=true`，並進行完整 HTTPS／Cookie 驗收。
 - 將 SQLite 與圖片移至 EC2 持久資料目錄。
 - AWS Parameter Store、IAM role、HTTPS、正式網域與 Nginx/systemd 驗證。
@@ -483,7 +479,7 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 - 不要將 `OPENAI_API_KEY` 放入任何 `VITE_` 變數。
 - 不要讓 EC2 的 port 8000 對公網開放。
 - 正式環境務必更換 `SECRET_KEY`。
-- 生成 endpoint 已有登入、ownership、quota、單帳號 active job 鎖與冪等保護；部署前仍須完成敏感 Log 清理與 production bundle 機密掃描。
+- 生成 endpoint 已有登入、ownership、quota、單帳號 active job 鎖與冪等保護；敏感 Log、一般化 `500`、production bundle 與 repository 機密掃描已完成，正式 EC2 上線後仍須驗收實際 journal／Nginx log。
 
 ## 商品預覽與近期行為說明（2026-07-23）
 

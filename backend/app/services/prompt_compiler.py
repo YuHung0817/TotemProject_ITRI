@@ -151,7 +151,7 @@ def compile_user_brief(client: OpenAI, request: GenerateRequest) -> str:
         if compiled:
             return compiled
     except Exception as exc:
-        safe_print(f"[prompt compiler skipped] {exc}")
+        safe_print(f"[prompt compiler skipped] error_type={type(exc).__name__}")
 
     return source
 

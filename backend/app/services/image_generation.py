@@ -41,7 +41,6 @@ def print_prompt_comparison(prompt: str, revised_prompt: str | None) -> None:
         return
 
     safe_print(f"[prompt comparison] revised_prompt chars: {len(revised_prompt)}")
-    safe_print("\n[revised prompt]\n" + revised_prompt + "\n[/revised prompt]\n")
 
 
 def palette_record(source: Image.Image, color_count: int = 5) -> dict[str, Any]:
@@ -102,7 +101,7 @@ def generate_one_image(
 ) -> dict[str, Any]:
     image_id = uuid.uuid4().hex[:12]
     prompt = build_generation_prompt(client, request, variant_index)
-    safe_print("\n[image prompt]\n" + prompt + "\n[/image prompt]\n")
+    safe_print(f"[image generation] prompt chars: {len(prompt)}")
     response = client.images.generate(
         model=DEFAULT_MODEL,
         prompt=prompt,
@@ -141,7 +140,7 @@ def generate_random_palette_variants(
     """Generate one motif, then create four geometry-identical random palette versions."""
     selected_palettes = random.sample(list(PALETTE_COLORS), k=4)
     prompt = build_generation_prompt(client, request, 0)
-    safe_print("\n[image prompt]\n" + prompt + "\n[/image prompt]\n")
+    safe_print(f"[image generation] prompt chars: {len(prompt)}")
     response = client.images.generate(
         model=DEFAULT_MODEL,
         prompt=prompt,
@@ -206,7 +205,7 @@ def regenerate_palette_variant(
 ) -> dict[str, Any]:
     """Generate a new motif and preserve the selected record's output palette."""
     prompt = build_generation_prompt(client, request, 0)
-    safe_print("\n[image prompt]\n" + prompt + "\n[/image prompt]\n")
+    safe_print(f"[image generation] prompt chars: {len(prompt)}")
     response = client.images.generate(
         model=DEFAULT_MODEL,
         prompt=prompt,
@@ -268,7 +267,7 @@ def regenerate_from_record(client: OpenAI, old: dict[str, Any]) -> dict[str, Any
         prompt=generation.get("user_prompt", old.get("request", {}).get("prompt", "")),
         elements=generation.get("elements", old.get("request", {}).get("elements", [])),
     )
-    safe_print("\n[exact stored image prompt]\n" + prompt + "\n[/exact stored image prompt]\n")
+    safe_print(f"[image regeneration] stored prompt chars: {len(prompt)}")
     response = client.images.generate(
         model=DEFAULT_MODEL,
         prompt=prompt,
@@ -415,13 +414,10 @@ matches multiple palette entries with different shades, include every matching s
             "[debug:gai-color-resolution] "
             + json.dumps(
                 {
-                    "instruction": instruction,
-                    "palette": current_palette,
+                    "instruction_chars": len(instruction),
+                    "palette_color_count": len(current_palette),
                     "confidence": confidence,
-                    "replacements": [
-                        {"source_rgb": source_rgb, "target_rgb": target_rgb, "label": label}
-                        for source_rgb, target_rgb, label in replacements
-                    ],
+                    "replacement_count": len(replacements),
                 },
                 ensure_ascii=False,
             )

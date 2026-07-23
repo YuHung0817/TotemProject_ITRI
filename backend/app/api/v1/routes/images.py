@@ -1,7 +1,5 @@
-import json
 import copy
 import random
-import traceback
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,7 +10,7 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import CurrentUser
-from app.core.console import safe_print
+from app.core.console import log_event
 from app.core.secrets import SecretConfigurationError, get_openai_api_key
 from app.db.session import get_db
 from app.schemas.image import (
@@ -118,9 +116,10 @@ def generate_preview_result(
         return create_product_preview(
             client(), motif_path, request, 0, product_reference=product_reference
         )
+    except HTTPException:
+        raise
     except Exception as exc:
-        traceback.print_exc()
-        raise HTTPException(500, str(exc)) from exc
+        raise internal_server_error("product_preview", exc) from exc
 
 
 def gallery_asset(record: dict, asset_type: str, asset: dict) -> GalleryAsset:
@@ -154,6 +153,23 @@ def client() -> OpenAI:
     return OpenAI(api_key=api_key)
 
 
+def internal_server_error(
+    operation: str,
+    error: Exception,
+    *,
+    image_id: str | None = None,
+    job_id: str | None = None,
+) -> HTTPException:
+    log_event(
+        "operation_failed",
+        operation=operation,
+        image_id=image_id,
+        job_id=job_id,
+        error_type=type(error).__name__,
+    )
+    return HTTPException(500, "The image operation failed")
+
+
 @router.post("/generate", response_model=GenerateResponse)
 def generate_images(
     request: GenerateRequest,
@@ -163,7 +179,13 @@ def generate_images(
     client_exchange_id: ClientExchangeId = None,
     db: Session = Depends(get_db),
 ) -> GenerateResponse:
-    safe_print("[debug:motif-generate] " + json.dumps(request.model_dump(), ensure_ascii=False))
+    log_event(
+        "operation_started",
+        operation="motif_generate",
+        prompt_chars=len(request.prompt),
+        element_count=len(request.elements),
+        excluded_element_count=len(request.excluded_elements),
+    )
     job = acquire_generation_job(
         db,
         idempotency_key,
@@ -180,18 +202,15 @@ def generate_images(
         fail_generation_job(db, job.id, exc)
         raise
     except Exception as exc:
-        traceback.print_exc()
         fail_generation_job(db, job.id, exc)
-        raise HTTPException(500, str(exc)) from exc
-    safe_print(
-        "[debug:motif-generated] "
-        + json.dumps(
-            [
-                {"id": item["id"], "palette_name": item.get("palette_name"), "url": item["url"]}
-                for item in saved_records
-            ],
-            ensure_ascii=False,
-        )
+        raise internal_server_error(
+            "motif_generate", exc, job_id=job.id
+        ) from exc
+    log_event(
+        "operation_succeeded",
+        operation="motif_generate",
+        job_id=job.id,
+        image_count=len(saved_records),
     )
     return GenerateResponse(images=[ImageRecord(**x) for x in saved_records])
 
@@ -290,8 +309,13 @@ def chart(
     colors: int = 5,
     db: Session = Depends(get_db),
 ) -> Response:
-    safe_print(
-        f"[debug:cross-stitch] image_id={image_id} width={width} height={height} colors={colors}"
+    log_event(
+        "operation_started",
+        operation="cross_stitch_chart",
+        image_id=image_id,
+        width=width,
+        height=height,
+        color_count=colors,
     )
     if not 10 <= width <= 300 or not 10 <= height <= 300 or not 2 <= colors <= 20:
         raise HTTPException(422, "Invalid chart dimensions or colors")
@@ -418,10 +442,7 @@ def preview(
     client_exchange_id: ClientExchangeId = None,
     db: Session = Depends(get_db),
 ) -> ImageRecord:
-    safe_print(
-        "[debug:product-preview] "
-        + json.dumps({"image_id": image_id, **request.model_dump()}, ensure_ascii=False)
-    )
+    log_event("operation_started", operation="product_preview", image_id=image_id)
     record = find_record(db, image_id, user.id)
     job = acquire_generation_job(
         db,
@@ -445,9 +466,11 @@ def preview(
     except Exception as exc:
         fail_generation_job(db, job.id, exc)
         raise
-    safe_print(
-        "[debug:product-preview-generated] "
-        + json.dumps({"image_id": image_id, "preview_url": result["url"]}, ensure_ascii=False)
+    log_event(
+        "operation_succeeded",
+        operation="product_preview",
+        image_id=image_id,
+        job_id=job.id,
     )
     return ImageRecord(**record)
 
@@ -473,10 +496,7 @@ def random_preview(
         placement=random.choice(placement_choices),
         display_style=random.choice(list(DISPLAY_STYLE_OPTIONS)),
     )
-    safe_print(
-        "[debug:random-product-preview] "
-        + json.dumps({"image_id": image_id, **request.model_dump()}, ensure_ascii=False)
-    )
+    log_event("operation_started", operation="random_product_preview", image_id=image_id)
     job = acquire_generation_job(
         db,
         idempotency_key,
@@ -586,15 +606,11 @@ def regenerate_image(
 def _regenerate_image(
     image_id: str, revision: RegenerateRequest, db: Session, user_id: str
 ) -> ImageRecord:
-    safe_print(
-        "[debug:motif-regenerate] "
-        + json.dumps(
-            {
-                "source_image_id": image_id,
-                "instruction": revision.instruction,
-            },
-            ensure_ascii=False,
-        )
+    log_event(
+        "operation_started",
+        operation="motif_regenerate",
+        image_id=image_id,
+        instruction_chars=len(revision.instruction),
     )
     old = find_record(db, image_id, user_id)
     if revision.mode == "palette":
@@ -602,51 +618,37 @@ def _regenerate_image(
             color_client = None if revision.instruction == "隨機更換配色" else client()
             new = recolor_existing_variant(old, revision.instruction, color_client)
         except ValueError as exc:
-            safe_print(
-                "[debug:code-recolor-needs-clarification] "
-                + json.dumps(
-                    {
-                        "source_image_id": image_id,
-                        "instruction": revision.instruction,
-                        "message": str(exc),
-                    },
-                    ensure_ascii=False,
-                )
+            log_event(
+                "operation_needs_clarification",
+                operation="code_recolor",
+                image_id=image_id,
+                instruction_chars=len(revision.instruction),
             )
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         new = save_record(db, new, user_id, parent_image_id=image_id)
-        safe_print(
-            "[debug:code-recolor] "
-            + json.dumps(
-                {
-                    "source_image_id": image_id,
-                    "new_image_id": new["id"],
-                    "instruction": revision.instruction,
-                    "palette_name": new.get("palette_name"),
-                    "used_image_api": False,
-                },
-                ensure_ascii=False,
-            )
+        log_event(
+            "operation_succeeded",
+            operation="code_recolor",
+            image_id=new["id"],
+            source_image_id=image_id,
+            used_image_api=False,
         )
         return ImageRecord(**new)
     if revision.mode == "same":
         try:
             new = regenerate_from_record(client(), old)
         except Exception as exc:
-            traceback.print_exc()
-            raise HTTPException(500, str(exc)) from exc
+            raise internal_server_error(
+                "regenerate_same", exc, image_id=image_id
+            ) from exc
         new = save_record(db, new, user_id, parent_image_id=image_id)
-        safe_print(
-            "[debug:exact-record-regenerated] "
-            + json.dumps(
-                {
-                    "source_image_id": image_id,
-                    "new_image_id": new["id"],
-                    "used_stored_prompt": True,
-                    "used_stored_palette": bool(old.get("palette")),
-                },
-                ensure_ascii=False,
-            )
+        log_event(
+            "operation_succeeded",
+            operation="regenerate_same",
+            image_id=new["id"],
+            source_image_id=image_id,
+            used_stored_prompt=True,
+            used_stored_palette=bool(old.get("palette")),
         )
         return ImageRecord(**new)
     openai_client = client()
@@ -690,24 +692,19 @@ def _regenerate_image(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        traceback.print_exc()
-        raise HTTPException(500, str(exc)) from exc
+        raise internal_server_error(
+            "motif_regenerate", exc, image_id=image_id
+        ) from exc
     new = save_record(db, new, user_id, parent_image_id=image_id)
-    safe_print(
-        "[debug:motif-regenerated] "
-        + json.dumps(
-            {
-                "source_image_id": image_id,
-                "new_image_id": new["id"],
-                "palette_name": new.get("palette_name"),
-                "url": new["url"],
-                "palette_changed": resolution.changes_palette,
-                "final_elements": resolution.final_elements,
-                "added_elements": resolution.added_elements,
-                "removed_elements": resolution.removed_elements,
-            },
-            ensure_ascii=False,
-        )
+    log_event(
+        "operation_succeeded",
+        operation="motif_regenerate",
+        image_id=new["id"],
+        source_image_id=image_id,
+        palette_changed=resolution.changes_palette,
+        final_element_count=len(resolution.final_elements),
+        added_element_count=len(resolution.added_elements),
+        removed_element_count=len(resolution.removed_elements),
     )
     return ImageRecord(**new)
 
