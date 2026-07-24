@@ -96,12 +96,14 @@ UNIQUE(collection_id, image_asset_id)
 所有需要保留 14 天的主資料在建立時寫入：
 
 ```text
-expires_at = created_at（UTC）+ 14 天
+聊天室 expires_at = 最後一次內容更新時間（UTC）+ 14 天
+圖片 expires_at = created_at（UTC）+ 14 天
 ```
 
 規則如下：
 
 - 聊天室到期時，刪除其訊息與相關生成紀錄。
+- 聊天室依最後一次內容更新排序；單純打開或讀取聊天室不更新排序，也不延長到期時間。
 - 每個圖片 asset 依自己的建立時間到期；收藏不會延長圖片期限。
 - 收藏資料夾永久保留；裡面的圖片到期後只清除圖片與收藏關聯，空資料夾不刪除。
 - 使用者手動刪除圖片時，立即從 UI 消失並進入相同的實體清理流程。
@@ -209,6 +211,7 @@ expires_at = created_at（UTC）+ 14 天
 - [x] 圖片與收藏資料完全改用 SQLite，不再保留 JSON 資料來源。
 - [x] generation job 保存 chatroom/exchange context，完成或失敗時由後端更新訊息與圖片關聯，並可處理訊息晚於 job 寫入的競態。
 - [x] 返回聊天室時重新向後端核對 generation job 最終狀態，避免切換頁面後將已完成圖片誤顯示為 `Load failed`。
+- [x] 聊天室依最後訊息／內容更新時間排序與延長期限；單純讀取不修改 `updated_at` 或 `expires_at`。
 - [x] 手機版依 viewport 自動適配，移除窄螢幕水平溢出並支援 safe area。
 
 ### B. 圖片儲存與生命週期

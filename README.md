@@ -548,15 +548,11 @@ backend/app/prompts/product_preview.py
 backend/app/services/product_preview.py
 ```
 
-### 聊天室滑動到期時間
+### 聊天室排序與滑動到期時間
 
-聊天室保存期限採滑動式 14 天，而不是建立後固定 14 天。以下操作會把聊天室及其訊息的 `expires_at` 更新為操作當下加上 `DATA_RETENTION_MINUTES`：
+聊天室依 `updated_at` 由新到舊排列；`updated_at` 代表最後一次訊息或聊天室內容更新，而不是最後查看時間。只是開啟單一聊天室或取得聊天室列表，都不會把它移到第一個，也不會延長保存期限。
 
-- 開啟單一聊天室。
-- 傳送或同步聊天室內容。
-- 重新命名聊天室。
-
-單純取得聊天室列表不會延長全部聊天室。預設 `DATA_RETENTION_MINUTES=20160`，即 14 天。
+傳送或同步聊天室內容時，聊天室及其訊息的 `expires_at` 會更新為操作當下加上 `DATA_RETENTION_MINUTES`。預設 `DATA_RETENTION_MINUTES=20160`，即最後一次內容更新後保留 14 天。
 
 ### 收藏圖版
 
