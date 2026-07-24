@@ -1,6 +1,6 @@
 # AWS EC2 部署（不使用 Docker）
 
-建議使用 Ubuntu 24.04 LTS。Security Group 只開放 22（限制管理 IP）、80、443；不要對外開放 8000。
+建議使用 Ubuntu 24.04 LTS。Security Group 只公開 80、443；不要對外開放 22、8000。管理 EC2 使用 AWS Systems Manager Session Manager。
 
 ## 第一次部署
 
@@ -16,7 +16,7 @@ sudo bash deploy/setup-ec2.sh
 
 腳本會自動：
 
-- 安裝 Python、Node.js、Nginx
+- 安裝 Python、Node.js、Nginx、Certbot
 - 建立 `safu` 系統使用者
 - 建立 `/opt/safu/.venv`
 - 安裝 backend 與 PostgreSQL driver
@@ -38,7 +38,7 @@ APP_ENV=production
 SECRET_KEY=足夠長的隨機字串
 DATABASE_URL=sqlite:////srv/safu-data/app.db
 IMAGE_STORAGE_ROOT=/srv/safu-data/images
-CORS_ORIGINS=https://你的網域
+CORS_ORIGINS=https://safu-studio.com
 SESSION_COOKIE_SECURE=true
 SESSION_TTL_MINUTES=480
 OPENAI_API_KEY=
@@ -79,7 +79,7 @@ sudo -u safu bash -c 'set -a; source /etc/safu/safu.env; set +a; cd /opt/safu/ba
 
 ```bash
 cd /opt/safu
-sudo -u safu git pull --ff-only
+sudo git pull --ff-only
 sudo bash deploy/setup-ec2.sh
 ```
 
@@ -92,4 +92,11 @@ sudo journalctl -u safu-api -f
 sudo nginx -t
 ```
 
-綁定網域後，再使用 Certbot 設定 HTTPS。正式環境應加入 CloudWatch logs、健康監控與告警，並確認 14 天清理 timer 正常執行。本專案目前採單一 EC2、SQLite 與本機圖片，不要求 RDS、S3 或資料備份。
+網域註冊完成後，在 Route 53 將 `safu-studio.com` 的 A 記錄指向 Safu EC2 的 Elastic IP。確認 DNS 已生效後執行：
+
+```bash
+sudo certbot --nginx -d safu-studio.com --redirect
+sudo certbot renew --dry-run
+```
+
+Certbot 會互動詢問憑證通知信箱與服務條款，不要將信箱或終端內容中的敏感資料貼到公開位置。正式環境應加入 CloudWatch logs、健康監控與告警，並確認 14 天清理 timer 正常執行。本專案目前採單一 EC2、SQLite 與本機圖片，不要求 RDS、S3 或資料備份。

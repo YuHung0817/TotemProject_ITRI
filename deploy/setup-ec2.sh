@@ -16,7 +16,16 @@ if [[ ! -f "${APP_DIR}/backend/pyproject.toml" ]]; then
 fi
 
 apt-get update
-apt-get install -y python3 python3-venv python3-pip nginx curl ca-certificates gnupg
+apt-get install -y \
+  python3 \
+  python3-venv \
+  python3-pip \
+  nginx \
+  certbot \
+  python3-certbot-nginx \
+  curl \
+  ca-certificates \
+  gnupg
 
 if ! command -v node >/dev/null || [[ "$(node --version | tr -d v | cut -d. -f1)" -lt 20 ]]; then
   install -d -m 0755 /etc/apt/keyrings
