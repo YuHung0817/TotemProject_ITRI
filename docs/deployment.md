@@ -2,6 +2,8 @@
 
 建議使用 Ubuntu 24.04 LTS。Security Group 只公開 80、443；不要對外開放 22、8000。管理 EC2 使用 AWS Systems Manager Session Manager。
 
+目前 production 使用 `https://safu-studio.com`，EC2 以 Nginx、systemd、SQLite 與獨立加密 EBS volume 運行。前端採手機優先響應式版面；部署後需以實機驗證不同螢幕寬度、登入、生成、切換聊天室、圖片顯示與下載。
+
 ## 第一次部署
 
 先將 repository 放到 `/opt/safu`：
@@ -44,8 +46,8 @@ SESSION_TTL_MINUTES=480
 OPENAI_API_KEY=
 OPENAI_API_KEY_PARAMETER_NAME=/safu/production/openai-api-key
 AWS_REGION=EC2 所在區域，例如 ap-northeast-1
-GENERATION_HOURLY_LIMIT=10
-GENERATION_DAILY_LIMIT=30
+GENERATION_HOURLY_LIMIT=100
+GENERATION_DAILY_LIMIT=300
 GENERATION_STALE_MINUTES=10
 IMAGE_MIN_FREE_BYTES=2147483648
 IMAGE_MIN_FREE_PERCENT=20
@@ -100,3 +102,19 @@ sudo certbot renew --dry-run
 ```
 
 Certbot 會互動詢問憑證通知信箱與服務條款，不要將信箱或終端內容中的敏感資料貼到公開位置。正式環境應加入 CloudWatch logs、健康監控與告警，並確認 14 天清理 timer 正常執行。本專案目前採單一 EC2、SQLite 與本機圖片，不要求 RDS、S3 或資料備份。
+
+## 程式更新
+
+在本機完成測試、commit 與 push 後，於 EC2 的 Session Manager 執行：
+
+```bash
+sudo git -C /opt/safu pull --ff-only
+sudo bash /opt/safu/deploy/setup-ec2.sh
+```
+
+部署腳本會重建前端、更新後端套件及 systemd/Nginx 設定，並保留 Certbot 管理的 HTTPS 設定。更新後檢查：
+
+```bash
+sudo systemctl is-active safu-api nginx safu-cleanup.timer
+curl -fsS https://safu-studio.com/api/v1/health
+```

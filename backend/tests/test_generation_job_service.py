@@ -7,12 +7,12 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 
 from app.db import Base
-from app.db.models import Chatroom, ImageRecord, Message, User
+from app.db.models import Chatroom, ImageAsset, ImageRecord, Message, User
 from app.services import generation_job_service
+from app.services.chat_service import chatroom_snapshot
 from app.services.generation_job_service import (
     acquire_generation_job,
     complete_generation_job,
-    reconcile_chatroom_generation_jobs,
     utc_now,
 )
 
@@ -111,12 +111,31 @@ def test_completed_job_reconciles_late_pending_chat_message(monkeypatch) -> None
             USER_ID,
         )
         image = ImageRecord(id="image-1", user_id="single-store", prompt="prompt")
-        db.add(image)
+        asset = ImageAsset(
+            id="asset-1",
+            image_record=image,
+            asset_type="motif",
+            storage_key="image-1.png",
+        )
+        db.add_all((image, asset))
         db.commit()
 
         # The provider finishes before the frontend's pending snapshot is saved.
         complete_generation_job(db, job, [image.id])
         room = Chatroom(id="room-1", user_id="single-store", title="chat")
+        user_message = Message(
+            id="message-user-1",
+            chatroom_id=room.id,
+            role="user",
+            message_type="revision",
+            client_exchange_id="exchange-1",
+            content="change it",
+            content_data={
+                "createdAt": 1_753_092_000_000,
+                "user": "change it",
+                "sourceImage": "/generated/images/source.png",
+            },
+        )
         assistant = Message(
             id="message-1",
             chatroom_id=room.id,
@@ -126,14 +145,18 @@ def test_completed_job_reconciles_late_pending_chat_message(monkeypatch) -> None
             content="正在生成",
             content_data={"reply": "正在生成", "pending": True},
         )
-        db.add_all((room, assistant))
+        db.add_all((room, user_message, assistant))
         db.commit()
 
-        reconcile_chatroom_generation_jobs(db, room.id, USER_ID)
-        db.commit()
+        # Opening a chatroom reconciles a job that finished while the user was
+        # viewing another page.
+        snapshot = chatroom_snapshot(db, room.id, USER_ID)
         db.refresh(assistant)
         db.refresh(image)
 
+        assert snapshot.revisionExchanges[0].pending is False
+        assert snapshot.revisionExchanges[0].image is not None
+        assert snapshot.revisionExchanges[0].image.id == image.id
         assert assistant.content_data["pending"] is False
         assert "已依照你的要求" in assistant.content
         assert image.chatroom_id == room.id

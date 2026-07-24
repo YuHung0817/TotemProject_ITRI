@@ -161,6 +161,13 @@ async function requestProtectedImage(url:string, options:RequestInit = {}, chatr
   return data;
 }
 
+async function requestChatroom(chatroomId:string):Promise<StoredChat> {
+  const response = await fetch(`${API}/chatrooms/${encodeURIComponent(chatroomId)}`);
+  const data = await readResponse(response);
+  if (!response.ok) throw new Error(data.detail ?? `讀取聊天室失敗 (${response.status})`);
+  return data;
+}
+
 const detailViews:AssetType[] = ["motif","preview","chart"];
 const CloseButtonIcon = () => <svg className="close-button-icon" viewBox="0 0 45 45" aria-hidden="true"><circle cx="22.5" cy="22.5" r="22.5"/><path d="m16 16 13 13m0-13L16 29"/></svg>;
 const SimilarIcon = () => <svg className="similar-icon" viewBox="0 0 36 36" aria-hidden="true"><path className="wand-body" fillRule="evenodd" d="M3.8 25.2 19.2 9.8a5.4 5.4 0 0 1 7.6 7.6L11.4 32.8a5.4 5.4 0 0 1-7.6-7.6Zm4.1 1.3L21 13.4a1.5 1.5 0 1 1 2.1 2.1L10 28.6a1.5 1.5 0 1 1-2.1-2.1Z"/><path className="wand-rays" d="M25 3v4M31.4 5.6l-2.8 2.8M33 12h-4M31.4 18.4l-2.8-2.8M18.6 5.6l2.8 2.8"/></svg>;
@@ -655,9 +662,21 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
     setStatus("每次生成一個圖騰，再輸出圖案相同的 4 組配色。"); setTopbarScrolled(false); setPage("chat"); setSidebarOpen(false);
   }
 
-  function openChat(chat:StoredChat) {
+  function displayChat(chat:StoredChat) {
     setActiveChatId(chat.id); setRevisionExchanges(chat.revisionExchanges); setGenerationExchanges(chat.generationExchanges.map(normalizeGenerationExchange));
     setConversationStarted(true); setRevisionTarget(null); setTopbarScrolled(false); setPage("chat"); setSidebarOpen(false);
+  }
+
+  async function openChat(chat:StoredChat) {
+    setSidebarOpen(false);
+    try {
+      const refreshed = await requestChatroom(chat.id);
+      setChatHistory(current => [refreshed,...current.filter(item => item.id !== refreshed.id)].slice(0,30));
+      displayChat(refreshed);
+    } catch (error) {
+      displayChat(chat);
+      setStatus(error instanceof Error ? error.message : "讀取聊天室失敗");
+    }
   }
 
   async function openFavorites() {
@@ -776,6 +795,17 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
         } : exchange));
         patchStoredGeneration(chatId, exchangeId, completedExchange);
       } catch (error) {
+        try {
+          const refreshed = await requestChatroom(chatId);
+          const recovered = refreshed.generationExchanges.find(exchange => exchange.id === exchangeId);
+          if (recovered && !recovered.pending) {
+            setChatHistory(current => [refreshed,...current.filter(chat => chat.id !== refreshed.id)].slice(0,30));
+            setGenerationExchanges(current => current.map(exchange => exchange.id === exchangeId ? normalizeGenerationExchange(recovered) : exchange));
+            return;
+          }
+        } catch {
+          // Keep the original request error when reconciliation also cannot reach the server.
+        }
         const message = error instanceof Error ? error.message : "生成失敗";
         setGenerationExchanges(current => current.map(exchange => exchange.id === exchangeId ? {...exchange,reply:message,pending:false} : exchange));
         patchStoredGeneration(chatId, exchangeId, {reply:message,pending:false});
@@ -860,7 +890,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
         <button type="button" onClick={openImages}><span><ImagesIcon /></span>我的圖片</button>
         <button type="button" onClick={openFavorites}><span><BookmarkIcon /></span>我的收藏</button>
       </nav>
-      <div className="recent-chats"><p>最近對話</p>{chatHistory.length === 0 ? <small>尚無對話紀錄</small> : chatHistory.map(chat => <button type="button" className={chat.id === activeChatId ? "active" : ""} onClick={() => openChat(chat)} key={chat.id}>{chat.title}</button>)}</div>
+      <div className="recent-chats"><p>最近對話</p>{chatHistory.length === 0 ? <small>尚無對話紀錄</small> : chatHistory.map(chat => <button type="button" className={chat.id === activeChatId ? "active" : ""} onClick={() => void openChat(chat)} key={chat.id}>{chat.title}</button>)}</div>
       <button type="button" className="drawer-logout" onClick={()=>void onLogout()}>登出</button>
     </aside></>}
 

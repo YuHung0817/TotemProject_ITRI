@@ -256,7 +256,8 @@ def fail_generation_job(db: Session, job_id: str, error: Exception) -> None:
 
 def reconcile_chatroom_generation_jobs(
     db: Session, chatroom_id: str, user_id: str
-) -> None:
+) -> bool:
+    reconciled = False
     jobs = db.scalars(
         select(GenerationJob).where(
             GenerationJob.user_id == user_id,
@@ -265,7 +266,8 @@ def reconcile_chatroom_generation_jobs(
     ).all()
     for job in jobs:
         if (job.request_data or {}).get("chatroom_id") == chatroom_id:
-            sync_generation_job_to_chat(db, job)
+            reconciled = sync_generation_job_to_chat(db, job) or reconciled
+    return reconciled
 
 
 def job_images(db: Session, job: GenerationJob) -> list[ImageRecord]:

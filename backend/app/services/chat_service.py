@@ -198,8 +198,12 @@ def chatroom_snapshot(
     db: Session, chatroom_id: str, user_id: str, *, touch: bool = False
 ) -> ChatroomSnapshot:
     room = get_chatroom(db, chatroom_id, user_id)
+    from app.services.generation_job_service import reconcile_chatroom_generation_jobs
+
+    reconciled = reconcile_chatroom_generation_jobs(db, room.id, user_id)
     if touch:
         touch_chatroom(room)
+    if touch or reconciled:
         db.commit()
     messages = sorted(room.messages, key=lambda item: (item.created_at, item.role))
     grouped: dict[tuple[str, str], dict[str, Message]] = {}

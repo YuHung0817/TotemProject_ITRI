@@ -208,6 +208,8 @@ expires_at = created_at（UTC）+ 14 天
 - [x] 聊天室與訊息改用 API，並直接捨棄舊 `localStorage` 聊天紀錄。
 - [x] 圖片與收藏資料完全改用 SQLite，不再保留 JSON 資料來源。
 - [x] generation job 保存 chatroom/exchange context，完成或失敗時由後端更新訊息與圖片關聯，並可處理訊息晚於 job 寫入的競態。
+- [x] 返回聊天室時重新向後端核對 generation job 最終狀態，避免切換頁面後將已完成圖片誤顯示為 `Load failed`。
+- [x] 手機版依 viewport 自動適配，移除窄螢幕水平溢出並支援 safe area。
 
 ### B. 圖片儲存與生命週期
 
@@ -223,7 +225,7 @@ expires_at = created_at（UTC）+ 14 天
 ### C. 驗證與用量保護
 
 - [x] 建立單一帳號 CLI 初始化方式，不提供公開註冊 endpoint。
-- [ ] EC2 第一次部署時，以 `safu` 服務帳號執行 `python -m app.manage_user create` 建立正式商家帳號；後續更新不得重複初始化。
+- [x] EC2 第一次部署時，以 `safu` 服務帳號執行 `python -m app.manage_user create` 建立正式商家帳號；後續更新不得重複初始化。
 - [x] 加入 Argon2id 密碼 hash 與伺服器端 session；資料庫只保存 Session Token hash。
 - [x] 加入 HttpOnly／SameSite Cookie、Origin-based CSRF 防護與登入失敗限流；正式環境須設定 Secure Cookie。
 - [x] 除健康檢查、登入與開發文件外，所有非公開 API 及圖片檔案預設拒絕未登入請求，並驗證 ownership。
@@ -238,7 +240,7 @@ expires_at = created_at（UTC）+ 14 天
 
 ### D. AWS 與部署
 
-- [ ] 建立 EC2、加密 EBS、固定公網位址及最小權限 Security Group。
+- [x] 建立 EC2、加密 EBS、固定公網位址及最小權限 Security Group。
 - [x] 設定 IMDSv2 required。
 - [x] 建立只允許讀取指定 Parameter Store secret 的 IAM instance role。
 - [x] 將 GAI Token 寫入 Parameter Store `SecureString`。

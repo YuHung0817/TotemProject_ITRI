@@ -96,7 +96,7 @@ FastAPI :8000
    - `更換商品圖`：保持圖騰不變，只生成指定的新商品照。
 7. 一般輸入框在生成後仍可繼續從頭設計；同一聊天室會保留多組 Generation Exchange。每張圖片也可隨時使用「類似」。
 
-前端是最大寬度 480px 的手機版聊天室。第一則訊息送出時會立即建立 pending 聊天紀錄；即使先離開聊天室，完成或失敗結果仍會更新原 chat ID。聊天室、訊息、圖片與收藏皆由後端 SQLite 提供，因此重新整理或更換瀏覽器後仍可讀取相同資料。
+前端是最大寬度 480px 的手機版聊天室，會依裝置 viewport 自動適配；窄螢幕不會因固定卡片寬度產生水平溢出，並支援手機安全區域。第一則訊息送出時會立即建立 pending 聊天紀錄；即使先離開聊天室，完成或失敗結果仍會更新原 chat ID。返回聊天室時會重新向後端取得 generation job 最終狀態，避免圖片已完成但畫面仍顯示 `Load failed`。聊天室、訊息、圖片與收藏皆由後端 SQLite 提供，因此重新整理或更換瀏覽器後仍可讀取相同資料。
 
 ## 專案目錄
 
@@ -233,8 +233,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 | `OPENAI_IMAGE_MODEL` | 圖片生成模型 | `gpt-image-1` |
 | `OPENAI_PROMPT_COMPILER_MODEL` | Prompt compiler 模型 | `gpt-5-mini` |
 | `USE_PROMPT_COMPILER` | 是否啟用 prompt compiler | `1` |
-| `GENERATION_HOURLY_LIMIT` | 每小時最多建立的生成工作數 | `10` |
-| `GENERATION_DAILY_LIMIT` | 每 24 小時最多建立的生成工作數 | `30` |
+| `GENERATION_HOURLY_LIMIT` | 每小時最多建立的生成工作數 | `100` |
+| `GENERATION_DAILY_LIMIT` | 每 24 小時最多建立的生成工作數 | `300` |
 | `GENERATION_STALE_MINUTES` | 執行中工作超過多久視為中斷 | `10` |
 | `IMAGE_STORAGE_ROOT` | 圖片儲存根目錄；相對路徑以專案根目錄解析 | `backend/data/images` |
 | `IMAGE_MAX_BYTES` | 單張圖片最大位元組數 | `20000000` |
@@ -458,7 +458,7 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 
 - 可先部署只有開發者使用、資料可清除的私人 staging，以驗證 HTTPS、CORS、Nginx、環境變數、手機 UI 與 OpenAI API。
 - SQLite 部署維持單一 backend worker，資料與圖片依產品規則只保留 14 天。
-- 單一商家登入、Session Cookie、私有 API ownership 與清理 CLI 已完成；EC2 部署腳本會安裝並啟用 systemd cleanup timer。對外公開前仍須完成 HTTPS／Secure Cookie 驗收，並在 EC2 實測 timer。
+- 單一商家登入、Session Cookie、私有 API ownership、HTTPS、Secure Cookie 與清理 CLI 已完成；EC2 已啟用並實測 systemd cleanup timer。
 - 未來只有在需要多 worker、多台 EC2、長期保存或備份時，才遷移至 PostgreSQL/RDS 與 S3。
 
 ## 目前限制與後續工作
@@ -466,11 +466,11 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 - 原型程式的完整文化元素、Prompt 規則與圖片處理演算法已拆入對應模組；後續修改應保留重構前後行為測試。
 - SQLite 適用於目前的單一商家與單一 worker；不支援未來直接水平擴充成多台寫入。
 - 登入與 Session 驗證已完成；正式部署仍須使用 HTTPS、`SESSION_COOKIE_SECURE=true` 並驗證正式網域 Origin。
-- 圖片目前存在本機檔案系統；EC2 上應移到 `/srv/safu-data/images`。
+- 圖片在 EC2 儲存於獨立的 `/srv/safu-data/images` 加密 EBS volume。
 - 圖片生成目前是同步請求；生成時間變長後應加入背景工作佇列。
 - 生成鎖、額度、圖片、收藏、聊天室與生成工作均使用 Session 對應的實際登入者 ID。
 - 已提供單一帳號 CLI 初始化方式，但尚未建立圖形化管理後台或密碼重設流程。
-- 14 天資料與圖片清理服務及 CLI 已完成；本機可使用 `python -m app.cleanup` 預覽，確認後以 `python -m app.cleanup --execute` 刪除。EC2 的 systemd cleanup service/timer 已建立並接入部署腳本，正式主機建立後仍須驗證排程、重跑與開機恢復。
+- 14 天資料與圖片清理服務及 CLI 已完成；本機可使用 `python -m app.cleanup` 預覽，確認後以 `python -m app.cleanup --execute` 刪除。EC2 的 systemd cleanup service/timer 已建立、啟用並通過手動執行測試。
 - 上線前應加入 HTTPS、CloudWatch logs 與基本監控告警；依本專案決策不做資料備份。
 
 ## 安全注意事項

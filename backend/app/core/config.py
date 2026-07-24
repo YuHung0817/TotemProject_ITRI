@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     openai_image_model: str = "gpt-image-1"
     openai_prompt_compiler_model: str = "gpt-5-mini"
     use_prompt_compiler: bool = True
-    generation_hourly_limit: int = 10
-    generation_daily_limit: int = 30
+    generation_hourly_limit: int = 100
+    generation_daily_limit: int = 300
     generation_stale_minutes: int = 10
     image_storage_root: str = "backend/data/images"
     image_max_bytes: int = 20_000_000

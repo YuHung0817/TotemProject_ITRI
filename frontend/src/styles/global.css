@@ -1,6 +1,8 @@
 :root { font-family: Inter, "Noto Sans TC", system-ui, sans-serif; color:#202020; background:#fff; font-synthesis:none; }
 * { box-sizing:border-box; }
-body { margin:0; min-width:320px; min-height:100vh; }
+html,body,#root { width:100%; min-width:0; min-height:100%; }
+html { overflow-x:hidden; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+body { margin:0; min-height:100vh; overflow-x:hidden; }
 button,input { font:inherit; }
 button { cursor:pointer; }
 .auth-loading,.login-page { width:min(100%,480px); min-height:100vh; margin:auto; display:grid; place-items:center; padding:24px; background:#eef7fc; }
@@ -14,7 +16,7 @@ button { cursor:pointer; }
 .login-card > button { height:46px; border:0; border-radius:999px; background:#6E93CC; color:#fff; font-weight:800; }
 .login-card > button:disabled { opacity:.6; cursor:wait; }
 .login-error { color:#b43f32; font-size:12px; }
-.authenticated-app { position:relative; }
+.authenticated-app { position:relative; width:100%; min-width:0; }
 .close-image-button { padding:0!important; overflow:hidden; border:0!important; background:transparent!important; line-height:0!important; }
 .close-button-icon { width:100%; height:100%; display:block; }
 .close-button-icon circle { fill:rgba(255,255,255,.75); }
@@ -90,7 +92,7 @@ button { cursor:pointer; }
 
 /* Mobile-first prototype: keep the current interface at phone width on every screen. */
 body { background:#f1f1f1; }
-.app-shell { width:100%; max-width:480px; margin:0 auto; grid-template-columns:1fr; background:#fff; box-shadow:0 0 28px rgba(0,0,0,.08); }
+.app-shell { width:100%; max-width:480px; min-width:0; margin:0 auto; grid-template-columns:1fr; background:#fff; box-shadow:0 0 28px rgba(0,0,0,.08); }
 .sidebar { position:static; width:100%; height:52px; grid-column:1; flex-direction:row; border-right:0; border-bottom:1px solid #bbb; }
 .brand { width:100%; border:0; }
 .brand button { width:34px; height:34px; margin:0; border-width:2px; }
@@ -160,10 +162,10 @@ body { background:#f1f1f1; }
 .element-sheet-header strong { color:#332822; font-size:18px; }
 .element-sheet-header small { color:#8c7b72; font-size:12px; }
 .element-sheet-header button { position:absolute; top:22px; right:0; width:38px; height:38px; display:grid; place-items:center; border:1px solid #e3d9d3; border-radius:50%; background:#fff; color:#59483f; font-size:25px; line-height:1; }
-.element-grid { min-height:0; margin:0 -16px; padding:4px 16px 18px; overflow:auto; overscroll-behavior:contain; display:grid; grid-template-columns:repeat(2,176px); grid-auto-rows:218px; align-content:start; align-items:start; justify-content:center; gap:10px; background:transparent; }
+.element-grid { min-height:0; margin:0 -16px; padding:4px 16px 18px; overflow:auto; overscroll-behavior:contain; display:grid; grid-template-columns:repeat(2,minmax(0,176px)); grid-auto-rows:auto; align-content:start; align-items:start; justify-content:center; gap:10px; background:transparent; }
 .element-grid::after { content:""; grid-column:1/-1; height:calc(174px + env(safe-area-inset-bottom)); }
-.element-grid button { position:relative; width:176px; min-width:176px; height:218px; padding:0; overflow:hidden; display:block; line-height:0; border:0; border-radius:20px; background:#fff; color:#42342d; }
-.element-grid button > img { width:176px; height:218px; display:block; }
+.element-grid button { position:relative; width:100%; min-width:0; height:auto; aspect-ratio:176/218; padding:0; overflow:hidden; display:block; line-height:0; border:0; border-radius:20px; background:#fff; color:#42342d; }
+.element-grid button > img { width:100%; height:100%; display:block; object-fit:cover; }
 .element-grid button.active { background:#eff9fd; color:#287a9a; }
 .element-grid button.active::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none; border:3px solid #4f7fc8; border-radius:20px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.45); }
 @media (hover:hover) and (pointer:fine) {
@@ -174,6 +176,17 @@ body { background:#f1f1f1; }
 .composer-locked { display:grid; gap:3px; padding:13px 16px; color:#555; cursor:default; }
 .composer-locked span { font-size:13px; font-weight:700; }
 .composer-locked small { color:#888; font-size:10px; }
+
+@media (max-width:480px) {
+  input,select,textarea { font-size:16px; }
+}
+
+@media (max-width:360px) {
+  .hero { padding-right:12px; padding-left:12px; }
+  .element-sheet { padding-right:12px; padding-left:12px; }
+  .element-grid { margin-right:-12px; margin-left:-12px; padding-right:12px; padding-left:12px; gap:8px; }
+  .product-revision-options { grid-template-columns:1fr; }
+}
 
 .image-stage { position:relative; width:100%; aspect-ratio:3/1; display:grid; place-items:center; overflow:hidden; background:#f4efe8; cursor:pointer; }
 .image-stage.showing-preview { aspect-ratio:1/1; }
