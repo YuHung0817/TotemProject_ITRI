@@ -194,16 +194,12 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
     return chatroom_snapshot(db, room.id, user_id)
 
 
-def chatroom_snapshot(
-    db: Session, chatroom_id: str, user_id: str, *, touch: bool = False
-) -> ChatroomSnapshot:
+def chatroom_snapshot(db: Session, chatroom_id: str, user_id: str) -> ChatroomSnapshot:
     room = get_chatroom(db, chatroom_id, user_id)
     from app.services.generation_job_service import reconcile_chatroom_generation_jobs
 
     reconciled = reconcile_chatroom_generation_jobs(db, room.id, user_id)
-    if touch:
-        touch_chatroom(room)
-    if touch or reconciled:
+    if reconciled:
         db.commit()
     messages = sorted(room.messages, key=lambda item: (item.created_at, item.role))
     grouped: dict[tuple[str, str], dict[str, Message]] = {}

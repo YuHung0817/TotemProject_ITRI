@@ -559,6 +559,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   const promptInput = useRef<HTMLInputElement>(null);
   const pageSwitchStartX = useRef<number | null>(null);
   const pageSwitchDidSwipe = useRef(false);
+  const skipNextChatSave = useRef(false);
   const elementSheetStartY = useRef<number | null>(null);
   const [elementSheetDrag, setElementSheetDrag] = useState(0);
   const chatSaveQueue = useRef<Promise<void>>(Promise.resolve());
@@ -645,6 +646,10 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
 
   useEffect(() => {
     if (!activeChatId || !conversationStarted) return;
+    if (skipNextChatSave.current) {
+      skipNextChatSave.current = false;
+      return;
+    }
     const chat:StoredChat = {
       id:activeChatId,
       title:generationExchanges[0]?.prompt || generationExchanges[0]?.elements.join("、") || "圖騰對話",
@@ -665,6 +670,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   }
 
   function displayChat(chat:StoredChat) {
+    skipNextChatSave.current = true;
     setActiveChatId(chat.id); setRevisionExchanges(chat.revisionExchanges); setGenerationExchanges(chat.generationExchanges.map(normalizeGenerationExchange));
     setConversationStarted(true); setRevisionTarget(null); setTopbarScrolled(false); setPage("chat"); setSidebarOpen(false);
   }

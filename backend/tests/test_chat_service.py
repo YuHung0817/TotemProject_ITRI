@@ -88,24 +88,33 @@ def test_sync_chatroom_splits_exchanges_and_links_images() -> None:
         assert list_chatrooms(db, USER_ID) == []
 
 
-def test_using_chatroom_refreshes_expiry_but_listing_does_not() -> None:
+def test_reading_chatroom_does_not_refresh_expiry_or_sort_order() -> None:
     engine = sqlite_engine()
     with Session(engine) as db:
         db.add(User(id=USER_ID, username="store"))
-        room = Chatroom(
+        older_room = Chatroom(
             id="chat-1",
             user_id=USER_ID,
-            title="test",
+            title="older",
+            updated_at=datetime.now(timezone.utc) - timedelta(hours=1),
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=1),
         )
-        db.add(room)
+        newer_room = Chatroom(
+            id="chat-2",
+            user_id=USER_ID,
+            title="newer",
+            updated_at=datetime.now(timezone.utc),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+        )
+        db.add_all((older_room, newer_room))
         db.commit()
 
-        original_expiry = room.expires_at
-        list_chatrooms(db, USER_ID)
-        db.refresh(room)
-        assert room.expires_at == original_expiry
+        original_expiry = older_room.expires_at
+        original_updated_at = older_room.updated_at
+        assert [room.id for room in list_chatrooms(db, USER_ID)] == ["chat-2", "chat-1"]
 
-        chatroom_snapshot(db, room.id, USER_ID, touch=True)
-        db.refresh(room)
-        assert room.expires_at > original_expiry + timedelta(days=13)
+        chatroom_snapshot(db, older_room.id, USER_ID)
+        db.refresh(older_room)
+        assert older_room.expires_at == original_expiry
+        assert older_room.updated_at == original_updated_at
+        assert [room.id for room in list_chatrooms(db, USER_ID)] == ["chat-2", "chat-1"]
