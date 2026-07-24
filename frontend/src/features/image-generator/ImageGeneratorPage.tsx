@@ -546,6 +546,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   const [revisionExchanges, setRevisionExchanges] = useState<RevisionExchange[]>([]);
   const [generationExchanges, setGenerationExchanges] = useState<GenerationExchange[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
   const [topbarScrolled, setTopbarScrolled] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<StoredChat[]>([]);
@@ -657,6 +658,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   }, [activeChatId, conversationStarted, generationExchanges, revisionExchanges]);
 
   function newChat() {
+    setChatLoading(false);
     setConversationStarted(false); setActiveChatId(null);
     setRevisionExchanges([]); setGenerationExchanges([]); setRevisionTarget(null); setPrompt("");
     setStatus("每次生成一個圖騰，再輸出圖案相同的 4 組配色。"); setTopbarScrolled(false); setPage("chat"); setSidebarOpen(false);
@@ -668,6 +670,9 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   }
 
   async function openChat(chat:StoredChat) {
+    setPage("chat");
+    setTopbarScrolled(false);
+    setChatLoading(true);
     setSidebarOpen(false);
     try {
       const refreshed = await requestChatroom(chat.id);
@@ -676,6 +681,8 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
     } catch (error) {
       displayChat(chat);
       setStatus(error instanceof Error ? error.message : "讀取聊天室失敗");
+    } finally {
+      setChatLoading(false);
     }
   }
 
@@ -896,8 +903,9 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
 
     <main className="workspace">
       {page === "favorites" ? <section className="favorites-page" onScroll={event => setTopbarScrolled(event.currentTarget.scrollTop > 8)}>{activeCollection ? favoriteImages.length === 0 ? <p className="favorites-empty">這個資料夾還沒有圖片。</p> : <div className="favorites-grid">{favoriteImages.map(asset => <GalleryAssetCard asset={asset} onChanged={updateGalleryAsset} key={`${asset.record_id}-${asset.asset_type}`}/>)}</div> : <div className="collection-folder-grid">{collectionFolders.map(folder => <button type="button" className="collection-folder-card" onClick={() => openCollection(folder)} key={folder.id}><CollectionCover urls={folder.preview_urls ?? (folder.preview_url ? [folder.preview_url] : [])}/><strong>{folder.name}</strong><small>{folder.image_count} 張圖片</small></button>)}<form className="collection-create-card" onSubmit={event => {event.preventDefault();void addCollectionFolder();}}><div className="collection-create-cover"><i/><i/><i/><button type="submit">建立</button></div><input value={folderName} onChange={event => setFolderName(event.target.value)} aria-label="新資料夾名稱" placeholder="資料夾名稱"/></form></div>}</section> : page === "images" ? <section className="favorites-page images-page" onScroll={event => setTopbarScrolled(event.currentTarget.scrollTop > 8)}>{allImages.length === 0 ? <p className="favorites-empty">還沒有圖片。</p> : <div className="favorites-grid">{allImages.map(asset => <GalleryAssetCard asset={asset} onChanged={updateGalleryAsset} key={`${asset.record_id}-${asset.asset_type}`}/>)}</div>}</section> : <section className="hero" onScroll={event => setTopbarScrolled(event.currentTarget.scrollTop > 8)}>
-        {!conversationStarted && <div className="hero-intro"><h1>你說，我畫！</h1><p>選擇元素或描述想法，開始設計圖騰。</p></div>}
-        {conversationStarted && <div className="chat-thread">
+        {chatLoading && <div className="chat-loading" role="status"><span className="chat-loading-spinner" aria-hidden="true"/><p>載入對話中…</p></div>}
+        {!chatLoading && !conversationStarted && <div className="hero-intro"><h1>你說，我畫！</h1><p>選擇元素或描述想法，開始設計圖騰。</p></div>}
+        {!chatLoading && conversationStarted && <div className="chat-thread">
           {timelineExchanges.map(item => item.kind === "revision" ? <div className="revision-exchange" key={item.exchange.id}>
             <div className="message user-message revision-user-message"><img src={`${SERVER}${item.exchange.sourceImage}`} alt="這次要求修改的原圖騰"/><p>{item.exchange.user}</p></div>
             <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.image) && <div className="chat-results"><div className="gallery">{item.exchange.image ? <ImageCard image={item.exchange.image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision}/> : <div className="generation-placeholder" aria-hidden="true"/>}</div></div>}</div>
@@ -906,7 +914,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
             <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.images.length > 0) && <div className="chat-results"><div className="gallery">{item.exchange.images.length > 0 ? item.exchange.images.map(image => <ImageCard image={image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} key={image.id}/>) : Array.from({length:4},(_,index)=><div className="generation-placeholder" aria-hidden="true" key={index}/>)}</div>{item.exchange.images.length === 4 && <div className="generation-regenerate"><span>一鍵重新生成</span><button type="button" disabled={busy || item.exchange.pending} onClick={()=>void regenerateGeneration(item.exchange)} aria-label="依照原提示重新生成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 6"/><path d="M19 3v5h-5"/></svg></button></div>}</div>}</div>
           </div>)}
         </div>}
-        <form className="composer" onSubmit={submit}>
+        {!chatLoading && <form className="composer" onSubmit={submit}>
           {revisionTarget && <><div className="revision-context"><img src={`${SERVER}${revisionTarget.totem_url ?? revisionTarget.url}`} alt="要修改的圖騰"/><div><strong>{revisionMode === "product" ? "更換商品圖" : "修改圖騰"}</strong><span>{revisionMode === "product" ? "選擇商品、圖騰位置與商品顏色" : revisionMode === "palette" ? "可直接送出隨機換色，或輸入指定顏色" : "描述你想如何修改這張圖騰"}</span></div><button type="button" className="close-image-button" onClick={() => setRevisionTarget(null)} aria-label="取消修改"><CloseButtonIcon /></button></div><div className="revision-mode-tags"><button type="button" className={revisionMode === "elements" ? "active" : ""} onClick={() => setRevisionMode("elements")}>更換元素</button><button type="button" className={revisionMode === "palette" ? "active" : ""} onClick={() => setRevisionMode("palette")}>更換配色</button><button type="button" className={revisionMode === "same" ? "active" : ""} onClick={() => setRevisionMode("same")}>原組合重新生成</button><button type="button" className={revisionMode === "product" ? "active" : ""} onClick={() => setRevisionMode("product")}>更換商品圖</button></div>{revisionMode === "product" && <div className="product-revision-options"><label>載體<select value={revisionProduct} onChange={event => {const value=event.target.value;setRevisionProduct(value);setRevisionPlacement(placementByProduct[value][0]);}}>{products.map(value => <option value={value} key={value}>{value}</option>)}</select></label><label>圖騰位置<select value={revisionPlacement} onChange={event => setRevisionPlacement(event.target.value)}>{placementByProduct[revisionProduct].map(value => <option value={value} key={value}>{value}</option>)}</select></label><label>商品與背景<select value={revisionDisplayStyle} onChange={event => setRevisionDisplayStyle(event.target.value)}><option>白色商品＋白底</option><option>黑色商品＋白底</option><option>深紅色商品＋白底</option><option>深綠色商品＋白底</option><option>深藍色商品＋白底</option></select></label></div>}</>}
           {selected.length > 0 && <div className="composer-tags">{selected.map(name => <button type="button" onClick={() => toggle(name)} key={name}><ElementTagIcon name={name}/>{name}<span>×</span></button>)}</div>}
           <div className={`prompt-row ${revisionTarget && revisionMode === "product" ? "product-submit-row" : ""}`}>
@@ -920,7 +928,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
             <button type="button" disabled><span>⌕</span>工藝技術</button>
           </div>
           </>}
-        </form>
+        </form>}
         {showElements && <div className="element-sheet-background" aria-hidden="true"/>}
         {showElements && <section className="element-sheet" style={{transform:`translate(-50%, ${elementSheetDrag}px)`}} role="dialog" aria-label="選擇元素">
           <div className="element-sheet-header" onPointerDown={startElementSheetDrag} onPointerMove={moveElementSheetDrag} onPointerUp={endElementSheetDrag} onPointerCancel={endElementSheetDrag}>
