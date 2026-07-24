@@ -58,7 +58,11 @@ fi
 install -m 0644 "${APP_DIR}/deploy/systemd/safu-api.service" /etc/systemd/system/safu-api.service
 install -m 0644 "${APP_DIR}/deploy/systemd/safu-cleanup.service" /etc/systemd/system/safu-cleanup.service
 install -m 0644 "${APP_DIR}/deploy/systemd/safu-cleanup.timer" /etc/systemd/system/safu-cleanup.timer
-install -m 0644 "${APP_DIR}/deploy/nginx/safu.conf" /etc/nginx/sites-available/safu
+if [[ -d /etc/letsencrypt/live/safu-studio.com ]]; then
+  echo "Preserving the Certbot-managed Nginx HTTPS configuration."
+else
+  install -m 0644 "${APP_DIR}/deploy/nginx/safu.conf" /etc/nginx/sites-available/safu
+fi
 ln -sfn /etc/nginx/sites-available/safu /etc/nginx/sites-enabled/safu
 rm -f /etc/nginx/sites-enabled/default
 
