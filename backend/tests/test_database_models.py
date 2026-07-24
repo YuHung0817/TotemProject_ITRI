@@ -93,6 +93,29 @@ def test_database_catalog_round_trip_preserves_api_shape_and_collections() -> No
         assert counts == {"favorites": 1, folder["id"]: 1}
 
 
+def test_legacy_system_collection_is_presented_as_my_favorites() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        user = User(id=DEFAULT_USER_ID, username="store")
+        db.add_all(
+            [
+                user,
+                Collection(
+                    id="favorites",
+                    user=user,
+                    name="我的收藏",
+                    is_system=True,
+                ),
+            ]
+        )
+        db.commit()
+
+        collections = list_collections(db, DEFAULT_USER_ID)
+
+        assert collections[0]["id"] == "favorites"
+        assert collections[0]["name"] == "我的最愛"
+
+
 def test_shared_image_file_is_only_unlinked_after_last_asset_reference() -> None:
     engine = sqlite_engine()
     with Session(engine) as db:

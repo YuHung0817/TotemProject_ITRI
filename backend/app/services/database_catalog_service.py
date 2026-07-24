@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import Collection, CollectionAsset, ImageAsset, ImageRecord, User
 from app.services.storage_service import image_metadata, image_path, image_url
-from app.services.collection_service import FAVORITES_ID
+from app.services.collection_service import FAVORITES_ID, FAVORITES_NAME
 from app.core.config import get_settings
 
 DEFAULT_USER_ID = "single-store"
@@ -45,7 +45,7 @@ def ensure_default_data(db: Session) -> User:
             Collection(
                 id=FAVORITES_ID,
                 user_id=user.id,
-                name="我的收藏",
+                name=FAVORITES_NAME,
                 is_system=True,
                 expires_at=None,
             )
@@ -279,7 +279,7 @@ def list_collections(db: Session, user_id: str) -> list[dict[str, Any]]:
         result.append(
             {
                 "id": collection.id,
-                "name": collection.name,
+                "name": FAVORITES_NAME if collection.is_system else collection.name,
                 "system": collection.is_system,
                 "image_count": len(active),
                 "preview_url": urls[0] if urls else None,
