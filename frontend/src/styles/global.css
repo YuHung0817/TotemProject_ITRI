@@ -376,6 +376,8 @@ html[data-zoom-hero-transition="close"]::view-transition-new(root) { animation:n
 .revision-user-message img { width:92px; max-width:100%; aspect-ratio:3.2/1; justify-self:end; object-fit:cover; border-radius:8px; background:transparent; }
 .revision-source-link { width:92px; max-width:100%; padding:0; justify-self:end; border:0; border-radius:8px; background:transparent; cursor:pointer; }
 .revision-source-link img { width:100%; }
+.revision-source-link.product-source img { aspect-ratio:1; object-fit:cover; }
+.revision-source-link.motif-source img { aspect-ratio:3.2/1; object-fit:cover; }
 .revision-source-link:focus-visible { outline:3px solid rgba(89,126,160,.55); outline-offset:3px; }
 .source-image-target { animation:source-image-target 1.4s ease-out; }
 @keyframes source-image-target { 0%,35% { box-shadow:0 0 0 5px rgba(89,126,160,.5); } 100% { box-shadow:0 0 0 0 rgba(89,126,160,0); } }
