@@ -495,7 +495,7 @@ html[data-page-transition="backward"]::view-transition-new(gallery-page) { anima
 .favorites-heading .page-new-chat { margin-left:auto; display:grid; place-items:center; color:#50391C; }
 .favorites-heading .page-new-chat .new-chat-icon { width:21px; height:21px; }
 .favorites-grid { display:block; columns:2; column-gap:10px; }
-.images-page,.collection-assets-page { padding-right:0; padding-left:0; }
+.images-page,.collection-assets-page { padding-top:calc(96px + env(safe-area-inset-top)); padding-right:0; padding-left:0; }
 .images-page .favorites-grid,.collection-assets-page .favorites-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; background:transparent; }
 .images-page .favorite-card,.collection-assets-page .favorite-card { display:block; margin:0; }
 .images-page .favorite-image,.collection-assets-page .favorite-image { aspect-ratio:1!important; border:1px solid #fff; border-radius:0; box-shadow:none; }
