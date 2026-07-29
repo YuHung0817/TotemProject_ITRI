@@ -73,6 +73,13 @@ type StoredChat = { id:string; title:string; expires_at?:string; revisionExchang
 type RevisionMode = "elements" | "palette" | "same" | "product";
 const detailViews:AssetType[] = ["motif","preview","chart"];
 
+function revisionSourceImage(image:ImageRecord, mode:RevisionMode|null):string {
+  if (mode === "product") {
+    return image.assets?.preview?.url ?? image.totem_url ?? image.url;
+  }
+  return image.totem_url ?? image.url;
+}
+
 function normalizeGenerationExchange(exchange:GenerationExchange):GenerationExchange {
   if (exchange.images.length === 0 || !exchange.pending) {
     return {...exchange,reply:safeStoredReply(exchange.reply,"圖片生成失敗，請重新送出要求。")};
@@ -528,7 +535,7 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, initialAsset=
 
   return <article
     className={`card image-card ${squareCard ? "square-image-card" : ""}`}
-    data-chat-image-urls={[image.url,image.totem_url].filter(Boolean).join("\n")}
+    data-chat-image-urls={[image.url,image.totem_url,...Object.values(image.assets ?? {}).map(asset=>asset?.url)].filter(Boolean).join("\n")}
   >
     <button type="button" className={`image-stage image-open-button ${cardAsset === "preview" ? "showing-preview" : ""} ${squareCard ? "square-card" : ""}`} onClick={openDetail}>
       <img src={`${SERVER}${cardUrl}`} alt={`${assetLabels[cardAsset]} ${image.id}`} style={heroTransitioning && !detailOpen ? {viewTransitionName:"active-image-hero"} : undefined} onError={()=>setImageUnavailable(true)}/>
@@ -1213,7 +1220,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
       const chatId = activeChatId;
       setConversationStarted(true); setBusy(true); setRevisionTarget(null);
       const modeLabel = revisionMode === "palette" ? "更換配色" : revisionMode === "elements" ? "更換元素" : revisionMode === "product" ? "更換商品圖" : "原組合重新生成";
-      const pendingRevision:RevisionExchange = { id:exchangeId, createdAt:Date.now(), user:revisionMode === "product" ? `${modeLabel}：${prompt.trim()}` : `${modeLabel}${prompt.trim() ? `：${prompt.trim()}` : ""}`, sourceImage:target.totem_url ?? target.url, reply:revisionMode === "product" ? "正在把同一個圖騰套用到新的商品設定…" : revisionMode === "palette" ? "正在判斷最適合的換色方式…" : "正在依照你的要求修改這張圖騰…", pending:true, displayAsset:revisionMode === "product" ? "preview" : "motif" };
+      const pendingRevision:RevisionExchange = { id:exchangeId, createdAt:Date.now(), user:revisionMode === "product" ? `${modeLabel}：${prompt.trim()}` : `${modeLabel}${prompt.trim() ? `：${prompt.trim()}` : ""}`, sourceImage:revisionSourceImage(target,revisionMode), reply:revisionMode === "product" ? "正在把同一個圖騰套用到新的商品設定…" : revisionMode === "palette" ? "正在判斷最適合的換色方式…" : "正在依照你的要求修改這張圖騰…", pending:true, displayAsset:revisionMode === "product" ? "preview" : "motif" };
       setRevisionExchanges(current => [...current, pendingRevision]);
       if (chatId) persistChatHistory(current => current.map(chat => chat.id === chatId ? {...chat,revisionExchanges:[...chat.revisionExchanges,pendingRevision]} : chat));
       try {
@@ -1400,7 +1407,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
         </div>}
         {!chatLoading && conversationStarted && <div className="chat-thread">
           {timelineExchanges.map(item => item.kind === "revision" ? <div className="revision-exchange" key={item.exchange.id}>
-            <div className="message user-message revision-user-message"><button type="button" className="revision-source-link" onClick={()=>scrollToSourceImage(item.exchange.sourceImage)} aria-label="捲動到這次修改使用的原圖"><ExpiringSourceImage src={`${SERVER}${item.exchange.sourceImage}`} alt="這次要求修改的原圖騰"/></button><p>{item.exchange.user}</p></div>
+            <div className="message user-message revision-user-message"><button type="button" className="revision-source-link" onClick={()=>scrollToSourceImage(item.exchange.sourceImage)} aria-label="捲動到這次修改使用的來源圖片"><ExpiringSourceImage src={`${SERVER}${item.exchange.sourceImage}`} alt={item.exchange.displayAsset === "preview" ? "這次要求修改的原商品圖" : "這次要求修改的原圖騰"}/></button><p>{item.exchange.user}</p></div>
             <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.image || item.exchange.imageExpired) && <div className="chat-results"><div className="gallery">{item.exchange.image ? <ImageCard image={item.exchange.image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} initialAsset={item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖") ? "preview" : "motif"}/> : item.exchange.imageExpired ? <ExpiredImagePlaceholder/> : <div className="generation-placeholder" aria-hidden="true"/>}</div></div>}</div>
           </div> : <div className="revision-exchange" key={item.exchange.id}>
             {!item.exchange.hideUserMessage && <div className="message user-message">{(item.exchange.elements.length > 0 || (item.exchange.colors?.length??0) > 0 || item.exchange.carrier) && <div className="message-tags">{item.exchange.elements.map(name => <span key={name}><ElementTagIcon name={name}/>{name}</span>)}{(item.exchange.colors??[]).map(color => <span className="color-message-tag" key={color.name}><i style={{backgroundColor:`rgb(${color.rgb.join(",")})`}}/>{color.name}</span>)}{item.exchange.carrier&&<span className="carrier-message-tag"><CarrierIcon/>{item.exchange.carrier}</span>}</div>}{item.exchange.prompt && <p>{item.exchange.prompt}</p>}</div>}
@@ -1408,7 +1415,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
           </div>)}
         </div>}
         {!chatLoading && <form className={`composer ${showTools ? "tools-open" : ""}`} onSubmit={submit}>
-          {revisionTarget && <><div className="revision-context"><img src={`${SERVER}${revisionTarget.totem_url ?? revisionTarget.url}`} alt="要修改的圖騰"/><div><strong>{revisionMode === "product" ? "更換商品圖" : "修改圖騰"}</strong><span>{revisionMode === "product" ? "描述商品、圖騰位置、商品顏色與背景" : revisionMode === "palette" ? "可直接送出隨機換色，或輸入指定顏色" : revisionMode ? "描述你想如何修改這張圖騰" : "請先選擇一種修改方式"}</span></div><button type="button" className="close-image-button" onClick={() => setRevisionTarget(null)} aria-label="取消修改"><CloseButtonIcon /></button></div><div className="revision-mode-tags"><button type="button" className={revisionMode === "elements" ? "active" : ""} onClick={() => setRevisionMode("elements")}>更換元素</button><button type="button" className={revisionMode === "palette" ? "active" : ""} onClick={() => setRevisionMode("palette")}>更換配色</button><button type="button" className={revisionMode === "same" ? "active" : ""} onClick={() => setRevisionMode("same")}>原組合重新生成</button><button type="button" className={revisionMode === "product" ? "active" : ""} onClick={() => setRevisionMode("product")}>更換商品圖</button></div></>}
+          {revisionTarget && <><div className="revision-context"><img src={`${SERVER}${revisionSourceImage(revisionTarget,revisionMode)}`} alt={revisionMode === "product" ? "要修改的商品圖" : "要修改的圖騰"}/><div><strong>{revisionMode === "product" ? "更換商品圖" : "修改圖騰"}</strong><span>{revisionMode === "product" ? "描述商品、圖騰位置、商品顏色與背景" : revisionMode === "palette" ? "可直接送出隨機換色，或輸入指定顏色" : revisionMode ? "描述你想如何修改這張圖騰" : "請先選擇一種修改方式"}</span></div><button type="button" className="close-image-button" onClick={() => setRevisionTarget(null)} aria-label="取消修改"><CloseButtonIcon /></button></div><div className="revision-mode-tags"><button type="button" className={revisionMode === "elements" ? "active" : ""} onClick={() => setRevisionMode("elements")}>更換元素</button><button type="button" className={revisionMode === "palette" ? "active" : ""} onClick={() => setRevisionMode("palette")}>更換配色</button><button type="button" className={revisionMode === "same" ? "active" : ""} onClick={() => setRevisionMode("same")}>原組合重新生成</button><button type="button" className={revisionMode === "product" ? "active" : ""} onClick={() => setRevisionMode("product")}>更換商品圖</button></div></>}
           {selected.length > 0 && <div className="composer-tags">{selected.map(name => <button type="button" onClick={() => toggle(name)} key={name}><ElementTagIcon name={name}/>{name}<span>×</span></button>)}</div>}
           {selectedColors.length > 0 && <div className="composer-tags color-composer-tags">{selectedColors.map(color => <button type="button" onClick={() => toggleColor(color)} key={color.name}><i style={{backgroundColor:`rgb(${color.rgb.join(",")})`}}/>{color.name}<span>×</span></button>)}</div>}
           {selectedCarrier && <div className="composer-tags carrier-composer-tags"><button type="button" onClick={()=>setSelectedCarrier(null)}><CarrierIcon/>{selectedCarrier}<span>×</span></button></div>}
