@@ -1034,6 +1034,22 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
     if (page !== "favorites" || activeCollection) setCollectionEditMode(false);
   },[page,activeCollection?.id]);
 
+  useEffect(() => {
+    const root=document.documentElement;
+    root.dataset.appPage=page;
+    if (page === "chat") return () => {
+      if (root.dataset.appPage===page) delete root.dataset.appPage;
+    };
+
+    window.scrollTo({top:0,left:0,behavior:"instant"});
+    const handleWindowScroll=()=>updateTopbarForScroll(window.scrollY);
+    window.addEventListener("scroll",handleWindowScroll,{passive:true});
+    return () => {
+      window.removeEventListener("scroll",handleWindowScroll);
+      if (root.dataset.appPage===page) delete root.dataset.appPage;
+    };
+  },[page,activeCollection?.id]);
+
   function newChat() {
     const reduceMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setHomeTextReveal(false);

@@ -409,7 +409,6 @@ html,body,#root { height:100%; overflow:hidden; }
 .chat-loading-spinner { width:28px; height:28px; border:3px solid rgba(132,176,255,.25); border-top-color:#84B0FF; border-radius:50%; animation:chat-loading-spin .75s linear infinite; }
 @keyframes chat-loading-spin { to { transform:rotate(360deg); } }
 .composer { position:fixed; left:50%; bottom:max(12px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(calc(100% - 40px),440px); max-height:calc(100dvh - 76px); overflow-y:auto; z-index:40; }
-.authenticated-app::after { content:""; position:fixed; left:50%; bottom:0; z-index:39; width:min(100%,480px); height:calc(28px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:linear-gradient(to bottom,rgba(238,247,252,0),rgba(238,247,252,.18)); pointer-events:none; }
 @supports not (height:100dvh) {
   .app-shell,.workspace,.hero { height:100vh; }
   .composer { max-height:calc(100vh - 76px); }
@@ -473,6 +472,12 @@ html,body,#root { height:100%; overflow:hidden; }
 }
 
 .favorites-page { height:100dvh; overflow-y:auto; scroll-padding-top:calc(88px + env(safe-area-inset-top)); padding:calc(88px + env(safe-area-inset-top)) 16px max(36px,env(safe-area-inset-bottom)); background-color:#eef7fc; background-image:url("../assets/background.png"); background-position:center; background-size:cover; background-repeat:no-repeat; }
+html[data-app-page="images"],html[data-app-page="favorites"] { height:auto; min-height:100%; overflow-x:hidden; overflow-y:auto; }
+html[data-app-page="images"] body,html[data-app-page="favorites"] body,
+html[data-app-page="images"] #root,html[data-app-page="favorites"] #root { height:auto; min-height:100%; overflow-x:hidden; overflow-y:visible; }
+html[data-app-page="images"] .app-shell,html[data-app-page="favorites"] .app-shell,
+html[data-app-page="images"] .workspace,html[data-app-page="favorites"] .workspace { height:auto; min-height:100dvh; overflow:visible; }
+html[data-app-page="images"] .favorites-page,html[data-app-page="favorites"] .favorites-page { height:auto; min-height:100dvh; overflow:visible; }
 .gallery-page-motion-forward { animation:gallery-page-enter-forward var(--motion-duration-medium) var(--motion-ease-enter) both; }
 .gallery-page-motion-backward { animation:gallery-page-enter-backward var(--motion-duration-medium) var(--motion-ease-enter) both; }
 html[data-page-transition] .gallery-page-motion { view-transition-name:gallery-page; animation:none; }
