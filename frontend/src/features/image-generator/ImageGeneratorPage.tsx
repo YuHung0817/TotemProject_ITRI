@@ -964,9 +964,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
 
   useLayoutEffect(() => {
     if (page !== "chat" || !conversationStarted || !followLatestMessage.current) return;
-    const container = chatScrollRef.current;
-    if (!container) return;
-    container.scrollTo({top:container.scrollHeight,behavior:"smooth"});
+    window.scrollTo({top:document.documentElement.scrollHeight,behavior:"smooth"});
   }, [page, conversationStarted, generationExchanges, revisionExchanges]);
 
   function scrollToSourceImage(sourceImage:string) {
@@ -1037,12 +1035,14 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   useEffect(() => {
     const root=document.documentElement;
     root.dataset.appPage=page;
-    if (page === "chat") return () => {
-      if (root.dataset.appPage===page) delete root.dataset.appPage;
+    if (page !== "chat") window.scrollTo({top:0,left:0,behavior:"instant"});
+    const handleWindowScroll=()=>{
+      updateTopbarForScroll(window.scrollY);
+      if (page === "chat") {
+        followLatestMessage.current =
+          document.documentElement.scrollHeight-window.scrollY-window.innerHeight <= 80;
+      }
     };
-
-    window.scrollTo({top:0,left:0,behavior:"instant"});
-    const handleWindowScroll=()=>updateTopbarForScroll(window.scrollY);
     window.addEventListener("scroll",handleWindowScroll,{passive:true});
     return () => {
       window.removeEventListener("scroll",handleWindowScroll);

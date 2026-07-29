@@ -472,12 +472,11 @@ html,body,#root { height:100%; overflow:hidden; }
 }
 
 .favorites-page { height:100dvh; overflow-y:auto; scroll-padding-top:calc(88px + env(safe-area-inset-top)); padding:calc(88px + env(safe-area-inset-top)) 16px max(36px,env(safe-area-inset-bottom)); background-color:#eef7fc; background-image:url("../assets/background.png"); background-position:center; background-size:cover; background-repeat:no-repeat; }
-html[data-app-page="images"],html[data-app-page="favorites"] { height:auto; min-height:100%; overflow-x:hidden; overflow-y:auto; }
-html[data-app-page="images"] body,html[data-app-page="favorites"] body,
-html[data-app-page="images"] #root,html[data-app-page="favorites"] #root { height:auto; min-height:100%; overflow-x:hidden; overflow-y:visible; }
-html[data-app-page="images"] .app-shell,html[data-app-page="favorites"] .app-shell,
-html[data-app-page="images"] .workspace,html[data-app-page="favorites"] .workspace { height:auto; min-height:100dvh; overflow:visible; }
+html[data-app-page] { height:auto; min-height:100%; overflow-x:hidden; overflow-y:auto; }
+html[data-app-page] body,html[data-app-page] #root { height:auto; min-height:100%; overflow-x:hidden; overflow-y:visible; }
+html[data-app-page] .app-shell,html[data-app-page] .workspace { height:auto; min-height:100dvh; overflow:visible; }
 html[data-app-page="images"] .favorites-page,html[data-app-page="favorites"] .favorites-page { height:auto; min-height:100dvh; overflow:visible; }
+html[data-app-page="chat"] .hero { height:auto; min-height:100dvh; overflow:visible; overscroll-behavior:auto; }
 .gallery-page-motion-forward { animation:gallery-page-enter-forward var(--motion-duration-medium) var(--motion-ease-enter) both; }
 .gallery-page-motion-backward { animation:gallery-page-enter-backward var(--motion-duration-medium) var(--motion-ease-enter) both; }
 html[data-page-transition] .gallery-page-motion { view-transition-name:gallery-page; animation:none; }
