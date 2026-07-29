@@ -2,13 +2,14 @@
 * { box-sizing:border-box; }
 html,body,#root { width:100%; min-width:0; min-height:100%; }
 html { overflow-x:hidden; background:#eef7fc url("../assets/background.png") center/cover no-repeat fixed; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
-body { margin:0; min-height:100vh; overflow-x:hidden; background:transparent; }
+body,#root { min-height:100vh; min-height:100dvh; }
+body { margin:0; overflow-x:hidden; background:#eef7fc url("../assets/background.png") center/cover no-repeat fixed; }
 button,input { font:inherit; }
 button { cursor:pointer; transition:scale var(--motion-duration-fast) var(--motion-ease-standard); }
 button:active:not(:disabled):not(.drawer-backdrop):not(.element-sheet-background):not(.collection-picker-backdrop):not(.image-open-button) { scale:.97; }
 button:focus-visible { outline:3px solid rgba(132,176,255,.52); outline-offset:2px; }
 button:disabled { cursor:not-allowed; }
-.auth-loading,.login-page { width:min(100%,480px); min-height:100vh; margin:auto; display:grid; place-items:center; padding:24px; background-color:#eef7fc; background-image:url("../assets/background.png"); background-position:center; background-size:cover; background-repeat:no-repeat; }
+.auth-loading,.login-page { width:min(100%,480px); min-height:100vh; min-height:100dvh; margin:auto; display:grid; place-items:center; padding:24px; background-color:#eef7fc; background-image:url("../assets/background.png"); background-position:center; background-size:cover; background-repeat:no-repeat; }
 .login-card { width:100%; padding:34px 26px; display:grid; gap:16px;border: 1px solid rgba(255, 255, 255, 0.6); border-radius:24px; background:rgba(255,255,255,0.000001); box-shadow:0 14px 40px rgba(50,70,80,.14); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
 .login-mark { color:#84B0FF; font-size:12px; font-weight:900; letter-spacing:.25em; }
 .login-card h1 { margin:0; font-size:26px; }
@@ -99,8 +100,8 @@ button:disabled { cursor:not-allowed; }
 @media (max-width:800px) { .app-shell{grid-template-columns:1fr}.sidebar{position:static;width:100%;height:52px;grid-column:1;flex-direction:row;border-right:0;border-bottom:1px solid #bbb}.brand{width:100%;border:0}.brand button{margin:0;border-width:2px;width:34px;height:34px}.sidebar nav,.sidebar-bottom{display:none}.workspace{grid-column:1}.hero{min-height:60vh;padding:90px 20px 40px}.gallery{grid-template-columns:1fr}.tool-row button{min-width:auto}.results-heading{align-items:flex-start;flex-direction:column}.hero h1{letter-spacing:.1em} }
 
 /* Mobile-first prototype: keep the current interface at phone width on every screen. */
-body { background:transparent; }
-.app-shell { width:100%; max-width:480px; min-width:0; margin:0 auto; grid-template-columns:1fr; background:#fff; box-shadow:0 0 28px rgba(0,0,0,.08); }
+body { background:#eef7fc url("../assets/background.png") center/cover no-repeat fixed; }
+.app-shell { width:100%; max-width:480px; min-width:0; margin:0 auto; grid-template-columns:1fr; background:#eef7fc url("../assets/background.png") center/cover no-repeat; box-shadow:0 0 28px rgba(0,0,0,.08); }
 .sidebar { position:static; width:100%; height:52px; grid-column:1; flex-direction:row; border-right:0; border-bottom:1px solid #bbb; }
 .brand { width:100%; border:0; }
 .brand button { width:34px; height:34px; margin:0; border-width:2px; }
