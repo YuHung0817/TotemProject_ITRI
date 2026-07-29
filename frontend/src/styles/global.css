@@ -409,6 +409,7 @@ html,body,#root { height:100%; overflow:hidden; }
 .chat-loading-spinner { width:28px; height:28px; border:3px solid rgba(132,176,255,.25); border-top-color:#84B0FF; border-radius:50%; animation:chat-loading-spin .75s linear infinite; }
 @keyframes chat-loading-spin { to { transform:rotate(360deg); } }
 .composer { position:fixed; left:50%; bottom:max(12px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(calc(100% - 40px),440px); max-height:calc(100dvh - 76px); overflow-y:auto; z-index:40; }
+.authenticated-app::after { content:""; position:fixed; left:50%; bottom:0; z-index:39; width:min(100%,480px); height:calc(28px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:linear-gradient(to bottom,rgba(238,247,252,0),rgba(238,247,252,.18)); pointer-events:none; }
 @supports not (height:100dvh) {
   .app-shell,.workspace,.hero { height:100vh; }
   .composer { max-height:calc(100vh - 76px); }
