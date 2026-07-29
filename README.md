@@ -4,7 +4,7 @@
 
 本專案不需要 Docker Desktop。本機直接使用 Python virtual environment、Node.js、SQLite 與本機圖片目錄；部署至 AWS EC2 時使用 Nginx 與 systemd。圖片、聊天室、訊息、收藏及生成工作均已由 SQLAlchemy/SQLite 儲存，不再使用 JSON catalog 或瀏覽器 localStorage 作為正式資料來源。
 
-## 目前實作狀態（2026-07-22）
+## 目前實作狀態（2026-07-29）
 
 已完成：
 
@@ -41,15 +41,15 @@
 - 布農元素快速選擇
 - Prompt compiler：使用 `gpt-5-mini` 將需求整理為圖片生成指令
 - AI 圖片生成
-- 初始生成一次圖騰幾何，再輸出四組隨機配色
+- 初始生成使用同一組目標色票產生四種不同圖騰提案，並由 Pillow 將四張成品統一至指定色票後記錄實際 RGB
 - 對話式修改：更換元素、更換配色、原組合重新生成、更換商品圖
 - 更換元素先由 Revision Resolver 產生結構化 Design Spec，再編譯新 Prompt
-- GAI 解析自然語言顏色，Pillow 執行指定區域換色
-- 5 種商品與其合法位置的商品預覽
+- GAI 解析自然語言顏色；信心分數達 `0.91` 才使用 Pillow 執行指定區域換色，否則改走 Image API
+- 9 種內建商品參考圖，以及支援任意自由文字商品的商品預覽
 - 水平三連 repeat 預覽
-- 我的圖片瀑布流、收藏資料夾與預設「我的最愛」
+- 「我的圖片」與收藏資料夾內採三欄正方形圖庫，圖片之間以細白線分隔，未排滿的位置透出頁面背景
 - 圖騰詳情畫廊：圖騰原圖、商品展示、輔助圖
-- 全螢幕圖片檢視、雙指縮放、拖曳與左右切換
+- 「我的圖片／我的收藏」的全螢幕圖片檢視支援雙指縮放、拖曳與左右切換，並在底部顯示圖片到期時間
 - 手機聊天室介面，聊天室與訊息儲存於 SQLite
 - 橫式十字繡格線輔助圖
 - 每張圖騰使用 self-contained catalog record
@@ -84,19 +84,25 @@ FastAPI :8000
 
 ## 使用者流程
 
-1. 新聊天室顯示「元素、風格、工藝技術」與文字輸入框。
-2. 初次送出只生成一個圖騰幾何，再以 Pillow 產生四張不同配色；此階段不生成商品圖。
-3. 使用者點擊圖騰後進入詳情畫廊，可切換圖騰原圖、商品展示與十字繡輔助圖，並將目前圖片加入一個或多個收藏資料夾。
+1. 新聊天室顯示「元素、配色、載體」三個快捷按鈕；輸入框左側的「＋」可在對話開始後開啟相同選項。「風格」與「工藝技術」已移除。
+2. 初次送出時，若有選擇配色 tag 就使用該色票；只有一個顏色時自動加入白色。沒有配色 tag 才隨機選擇預設色票。Image API 一次產生四種不同圖騰，再由 Pillow 將四張成品統一到同一目標色票並記錄實際 RGB；此階段不生成商品圖。
+3. 使用者點擊圖騰後進入詳情畫廊，可切換圖騰原圖、商品展示與十字繡輔助圖，並將目前圖片加入一個或多個收藏資料夾。詳情畫廊是聊天室圖片的最終檢視頁，不會再從圖片進入雙指縮放頁。
 4. 商品預覽按需生成：只有第一次點開該圖騰詳情頁時，才在背景隨機選擇合法的商品、位置與商品／背景樣式並呼叫圖片 API；從未點開的圖騰不生成商品照。
-5. 若要指定其他商品設定，從聊天室圖片左下方的「類似」選擇「更換商品圖」，再選載體、合法位置與商品／背景。此操作建立獨立 record，保留舊商品照。
+5. 點擊聊天室圖片下方的「類似」後不預選修改模式，使用者必須自行選擇四種模式之一。若選擇「更換商品圖」，可直接以自然語言描述商品、位置、顏色、材質、背景或構圖；此操作建立獨立 record 並保留舊商品照。
 6. 修改圖騰分為四種模式：
    - `更換元素`：第一層 `gpt-5-mini` 將最新要求解析為結構化 Design Spec，第二層 Prompt Compiler 編譯新 Prompt，再呼叫 Image API。明確排除的元素會保存於 `excluded_elements`；例如「移除菱形」會覆蓋預設菱形偏好。
-   - `更換配色`：有文字時由文字 GAI 解析來源/目標 RGB，再由 Pillow 換色；留空時從預設布農色盤隨機換色。此模式不呼叫 Image API。
+   - `更換配色`：有文字時由文字 GAI 解析來源/目標 RGB；解析信心達 `0.91` 才由 Pillow 換色，否則改用 Image API。留空時從預設布農色盤隨機換色。
    - `原組合重新生成`：直接重用該 record 保存的完整 Prompt 與實際 RGB 色票，不重新執行 Prompt Compiler。
-   - `更換商品圖`：保持圖騰不變，只生成指定的新商品照。
+   - `更換商品圖`：保持圖騰不變，只生成指定的新商品照。文字解析成功時使用結構化商品設定；解析失敗時，直接把目前商品預覽圖、原始圖騰與使用者原文交給 Image Edit，不因缺少商品欄位回傳 `500`。
 7. 一般輸入框在生成後仍可繼續從頭設計；同一聊天室會保留多組 Generation Exchange。每張圖片也可隨時使用「類似」。
 
-前端是最大寬度 480px 的手機版聊天室，會依裝置 viewport 自動適配；窄螢幕不會因固定卡片寬度產生水平溢出，並支援手機安全區域。第一則訊息送出時會立即建立 pending 聊天紀錄；即使先離開聊天室，完成或失敗結果仍會更新原 chat ID。返回聊天室時會重新向後端取得 generation job 最終狀態，避免圖片已完成但畫面仍顯示 `Load failed`。聊天室、訊息、圖片與收藏皆由後端 SQLite 提供，因此重新整理或更換瀏覽器後仍可讀取相同資料。
+前端是最大寬度 480px 的手機版聊天室，會依裝置 viewport 自動適配；窄螢幕不會因固定卡片寬度產生水平溢出，並支援手機安全區域。四張初始提案在聊天訊息內使用 2×2 排列，每個容器比例為 `3:2`，圖片本身使用 `contain` 保持原比例；詳情頁尺寸不受影響。商品圖修改完成後，AI 回覆卡片會直接顯示新的商品預覽圖，點入詳情頁時預設開啟「商品預覽」，但仍保留「圖騰／商品預覽／輔助圖」三個頁籤。
+
+「我的圖片」與收藏資料夾內使用三欄 `1:1` 圖庫，縮圖以 `cover` 等比例填滿並置中裁切。圖片本身提供 `1px` 白色分隔框線，grid 背景保持透明，因此最後一排未滿三張時會顯示頁面背景，而不是整段白色區塊。縮圖不顯示到期文字；點開支援雙指縮放的全螢幕圖片檢視器後，才在底部顯示明確到期日期與時間。
+
+一般生成的 `↑` 送出按鈕只有在輸入框包含非空白文字時才顯示；「更換商品圖」等修改模式也使用相同的 `↑` 按鈕。使用者停留在聊天室底部時，送出訊息與 AI 回覆完成後會自動捲到底；若使用者主動往上查看舊訊息則暫停自動捲動，回到距離底部約 80 px 內才恢復。最近對話依最後一次送出／同步訊息的 `updated_at` 排序，單純開啟聊天室不會置頂。
+
+第一則訊息送出時會立即建立 pending 聊天紀錄；即使先離開聊天室，完成或失敗結果仍會更新原 chat ID。返回聊天室時會重新向後端取得 generation job 最終狀態，避免圖片已完成但畫面仍顯示 `Load failed`。聊天室、訊息、圖片與收藏皆由後端 SQLite 提供，因此重新整理或更換瀏覽器後仍可讀取相同資料。
 
 ## 專案目錄
 
@@ -268,6 +274,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 | `GET` | `/api/v1/images/assets` | 取得全部圖片資產，可用 `saved`／`favorite` 篩選 |
 | `PATCH` | `/api/v1/images/{id}/assets/{type}` | 更新 motif／preview／chart 的狀態 |
 | `GET/POST` | `/api/v1/images/collections` | 取得或新增收藏資料夾 |
+| `DELETE` | `/api/v1/images/collections/{collection_id}` | 刪除自訂收藏資料夾及其收藏關聯；不刪除圖片 |
 | `GET` | `/api/v1/images/collections/{collection_id}/assets` | 取得資料夾內圖片 |
 | `PATCH` | `/api/v1/images/{id}/assets/{type}/collections` | 設定圖片所屬收藏資料夾 |
 | `POST` | `/api/v1/images/{id}/preview` | 為指定圖騰生成或更新商品預覽 |
@@ -275,6 +282,19 @@ Set-ExecutionPolicy -Scope Process Bypass
 | `POST` | `/api/v1/images/{id}/preview/variant` | 保留圖騰並建立指定商品照的新 record |
 | `POST` | `/api/v1/images/{id}/regenerate` | 更換元素、程式換色或依完整 record 重新生成 |
 | `GET` | `/api/v1/images/{id}/cross-stitch-chart` | 產生十字繡輔助圖 |
+
+失敗回應統一使用以下結構：
+
+```json
+{
+  "detail": {
+    "code": "image_generation_timeout",
+    "message": "圖片生成逾時，請稍後再試。"
+  }
+}
+```
+
+`code` 是穩定的程式判斷依據；`message` 是安全的中文 API 訊息。FastAPI 輸入驗證錯誤、未處理的伺服器錯誤及第三方 API 失敗也會先經全域例外處理器轉換，不直接回傳英文 SDK 訊息、traceback、路徑或資料庫細節。React 前端只顯示已知 `code` 對應的中文文字；未知代碼、非 JSON 回應及網路例外一律使用中文通用提示，不直接顯示原始 `detail` 或 `error.message`。舊聊天室若保存純英文失敗訊息，載入時也會替換成中文通用提示。
 
 生成範例：
 
@@ -296,7 +316,7 @@ Invoke-RestMethod `
 
 聊天室內的生成請求另外傳送 `X-Chatroom-Id` 與 `X-Client-Exchange-Id`。後端會把這兩個值存入 generation job，完成或失敗後直接更新對應 assistant message 並連結結果圖片；即使使用者切換聊天室、重新整理或關閉頁面，也不依賴原頁面繼續存在。若 pending 訊息比 job 結果晚寫入，聊天室同步時會再次 reconciliation，避免訊息永久停在生成中。
 
-`palette` 與 `count` 不屬於前端初始生成請求。後端固定生成四組隨機、不重複的配色。每張圖騰是獨立且完整的 record；除了相容舊 UI 的 `palette_name`，也會保存從輸出圖片重新擷取的實際 RGB 色票。
+`palette` 與 `count` 不屬於前端初始生成請求。前端可在 `colors` 傳入配色 tags；有顏色時四張提案共用該目標色票，只有一色時後端自動加入白色；沒有顏色才隨機選擇一組預設色票。Image API 以 `n=4` 產生四種圖騰構圖，Pillow 再將每張成品統一到目標色票。每張圖騰是獨立且完整的 record，並保存從成品重新擷取的實際 RGB 色票。
 
 修改 endpoint 的 request body：
 
@@ -307,7 +327,7 @@ Invoke-RestMethod `
 }
 ```
 
-商品預覽 endpoint 的 request body：
+指定商品預覽的舊版結構化 request body 仍相容：
 
 ```json
 {
@@ -317,7 +337,15 @@ Invoke-RestMethod `
 }
 ```
 
-目前啟用商品：托特包、束口袋、午餐袋、飲料提袋、環形鑰匙圈。位置必須屬於該商品的合法選項。
+聊天室「更換商品圖」目前使用自由文字：
+
+```json
+{
+  "instruction": "換成黑色帆布托特包，圖騰放正面中央，使用白色背景"
+}
+```
+
+解析後若商品可對應內建參考圖，Image Edit 會收到「商品參考圖＋原始圖騰」；完全不在內建清單時只傳原始圖騰，商品外型由文字 Prompt 描述，不會誤用其他商品參考圖。若文字解析器失敗且目前已有商品預覽，則改傳「目前商品預覽圖＋原始圖騰＋使用者原文」給 Image Edit。商品 Prompt 全域要求完整商品入鏡、四周保留空間並盡量避免裁切。
 
 十字繡 endpoint 接受以下 query parameters：
 
@@ -351,7 +379,7 @@ backend/data/images/（由 IMAGE_STORAGE_ROOT 設定，與啟動目錄無關）
 
 ## 到期資料清理
 
-本機與正式環境目前都使用 `DATA_RETENTION_MINUTES=20160`（14 天）。若要測試短生命週期，可暫時調低此值；它只影響設定後新建立資料的 `expires_at`，測試結束必須改回 `20160`。
+本機與正式環境目前都使用 `DATA_RETENTION_MINUTES=20160`（14 天）。若要測試短生命週期，可暫時調低此值；它會套用到新建立的圖片版本，以及之後成功產生新商品圖或輔助圖而刷新期限的既有版本，測試結束必須改回 `20160`。
 
 圖片、聊天室、訊息與清理判斷一律使用 UTC；前端顯示時才轉換成本地時間。請勿使用作業系統本機時間字串寫入資料庫，避免台灣時區造成到期時間延後 8 小時。
 
@@ -371,7 +399,7 @@ Push-Location backend
 Pop-Location
 ```
 
-清理工作可重跑；圖片檔案不存在時不會失敗，共用中的圖片檔案不會因其中一筆 asset 到期而被刪除，仍在 `pending`／`running` 的 generation job 也不會被清理。收藏資料夾本身永久保留；圖片 asset 到期後，資料夾與該圖片的關聯會自動刪除，最後可能留下空資料夾。
+清理工作可重跑；圖片以 `ImageRecord` 版本為刪除單位，版本到期時才刪除旗下 assets 與收藏關聯。圖片檔案不存在時不會失敗；若多個版本共用相同 `storage_key`，實體檔案會保留到最後一個引用版本到期。仍在 `pending`／`running` 的 generation job 不會被清理。系統收藏資料夾「我的最愛」永久保留；自訂資料夾可由使用者刪除，刪除時只移除資料夾與收藏關聯，不刪除圖片資產。
 
 每張新圖騰使用一筆不依賴其他圖片的 self-contained record，核心資料包括：
 
@@ -412,9 +440,12 @@ Pop-Location
       "favorite": false,
       "collection_ids": [],
       "parameters": {
+        "instruction": "換成黑色帆布托特包，圖騰放正面中央",
         "product": "托特包",
         "placement": "袋子中央",
-        "display_style": "白色商品＋白底"
+        "display_style": "白色商品＋白底",
+        "reference_source": "built_in | current_preview | none",
+        "reference_filename": "tote-bag.jpg"
       }
     }
   }
@@ -427,9 +458,13 @@ Pop-Location
 
 商品圖只保存於 `assets.preview`，不再重複保存 `preview`、`preview_filename`、`preview_url` 或 `preview_request`。商品 variant 目前採「一個 record 對應一張商品照」：更換商品圖會建立新 record、沿用相同圖騰並保存新的 preview asset，避免覆蓋舊聊天室結果。
 
+同一個 `ImageRecord` 代表一個完整圖片版本，最多各有一筆 `motif`、`preview`、`chart` 與 `original` asset。版本內所有 active assets 共用 `ImageRecord.expires_at`：成功產生新商品圖或輔助圖時，整個版本的期限更新為當下加上 `DATA_RETENTION_MINUTES`；單純讀取、收藏或變更 saved 狀態不延長期限。商品圖修改建立的衍生 record 使用獨立期限，並以 `parent_image_id` 記錄來源。衍生版本可引用相同圖騰 `storage_key`；刪除舊版本時只要仍有有效引用，就不移除共用實體檔案。
+
+`GET /api/v1/images/assets` 會以 `asset_type + URL` 去除共用資產的重複項目，並優先保留最早建立的原始 record。因此連續「更換商品圖」時，每張新商品預覽仍會顯示，但沿用同一實體檔案的圖騰或輔助圖只在「我的圖片」顯示一次。資料庫中的衍生 record、parent 關係與共用 storage key 引用不受影響。
+
 SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStorage 聊天匯入邏輯已移除。圖片二進位仍放在檔案系統，SQLite 保存圖片路徑、metadata、收藏關係及聊天關聯。第一版 EC2 必須維持單一 FastAPI worker；若未來要多台主機或多 worker 寫入，應再遷移至 PostgreSQL。
 
-圖片檔案統一由 `storage_service.py` 管理。它負責安全解析 storage key、產生存取 URL、UUID 命名、圖片內容驗證、原子寫入、metadata 讀取與刪除。`/generated/images/{storage_key}` 已不再直接掛載公開靜態目錄，而是由 FastAPI 驗證 Session、ownership、刪除狀態與到期時間後回傳檔案；未登入、非擁有者、已刪除或已到期均不會取得圖片。
+圖片檔案統一由 `storage_service.py` 管理。它負責安全解析 storage key、產生存取 URL、UUID 命名、圖片內容驗證、原子寫入、metadata 讀取與刪除。`/generated/images/{storage_key}` 已不再直接掛載公開靜態目錄，而是由 FastAPI 驗證 Session、ownership、刪除狀態與所屬 `ImageRecord` 到期時間後回傳檔案；未登入、非擁有者、已刪除或版本已到期均不會取得圖片。Migration `d6f1a8c42e7b` 會將既有 active assets 的期限同步為所屬版本期限。
 
 ## AWS EC2 部署
 
@@ -490,7 +525,7 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 1. 系統內建的固定商品參考圖，用來保留商品外型、比例、接縫、翻蓋、肩帶、五金與視角。
 2. 使用者目前的圖騰圖片，作為要合成到商品上的最終圖案。
 
-Image API 最後只輸出一張商品預覽照，不會輸出拼貼圖。使用者只需選擇商品、圖騰位置及商品／背景顏色，不需自行上傳商品圖。
+Image API 最後只輸出一張商品預覽照，不會輸出拼貼圖。使用者在「更換商品圖」輸入自然語言需求，不需自行上傳商品圖；文字解析器會判斷商品、圖騰位置、商品／背景顏色及其他構圖要求。
 
 固定參考圖位於：
 
@@ -523,13 +558,13 @@ backend/app/services/product_reference_service.py
 1. 複製至 `backend/app/assets/product_references/`。
 2. 改用不含空格與中文字的安全檔名。
 3. 更新 `PRODUCT_REFERENCE_FILES`。
-4. 確認 `PRODUCT_OPTIONS`、`PRODUCT_PLACEMENT_OPTIONS`、前端 `products` 與 `placementByProduct` 同步。
+4. 確認 `PRODUCT_OPTIONS`、`PRODUCT_PLACEMENT_OPTIONS` 與前端載體選單 `products` 同步。
 
 套件封裝已透過 `backend/pyproject.toml` 的 `tool.setuptools.package-data` 納入這些 JPG 資產。
 
 ### 商品位置規則
 
-- 手動選擇商品時仍可使用「AI自動決定位置」。
+- 自由文字解析或舊版結構化 request 仍可使用「AI自動決定位置」。
 - `POST /api/v1/images/{id}/preview/random` 的隨機位置會排除「AI自動決定位置」，只從該商品的具體位置中抽選。
 - 「台灣高中生側背書包」使用台灣傳統高中學生布製側背書包造型，約寬 20 cm、高 15 cm、厚 6 cm，具有大面積正面翻蓋、側片、尼龍肩帶及塑膠調節扣。
 - 該書包的指定正面位置名稱為「翻蓋偏下方」，不是「袋子中央」。
@@ -548,11 +583,24 @@ backend/app/prompts/product_preview.py
 backend/app/services/product_preview.py
 ```
 
+### 自由文字商品修改與 fallback
+
+`POST /api/v1/images/{id}/preview/variant` 接受 `instruction` 自由文字。正常流程先由 Responses API 解析成商品、位置、展示方式與補充要求：
+
+- 能對應內建商品：第一張輸入是固定商品參考圖，第二張是原始圖騰。
+- 完全未知商品：只輸入原始圖騰，商品由文字 Prompt 建立。
+- 文字解析格式錯誤或解析 API 失敗：若目前 record 已有商品預覽，第一張改用目前商品預覽，第二張仍是原始圖騰，並將使用者原文直接加入 Image Edit Prompt。
+- fallback 使用目前商品圖時，preview parameters 記錄 `reference_source=current_preview` 與原商品圖檔名。
+
+所有商品預覽共用 `COMPLETE PRODUCT FRAMING` 規則：完整商品、提把、背帶與主要配件應盡量留在畫面內；必要時拉遠鏡頭，優先選擇較小但完整的商品，而不是放大後裁切。
+
+商品圖修改產生的新 record 會在聊天室 revision exchange 保存 `displayAsset=preview`。因此 AI 回覆卡片直接顯示商品圖；舊聊天室若缺少此欄位，前端會以「更換商品圖」訊息文字相容判斷。
+
 ### 聊天室排序與滑動到期時間
 
-聊天室依 `updated_at` 由新到舊排列；`updated_at` 代表最後一次訊息或聊天室內容更新，而不是最後查看時間。只是開啟單一聊天室或取得聊天室列表，都不會把它移到第一個，也不會延長保存期限。
+聊天室依 `updated_at` 由新到舊排列；`updated_at` 代表最後一次訊息或聊天室內容更新，而不是最後查看時間。只是開啟單一聊天室或取得聊天室列表，都不會把它移到第一個，也不會延長保存期限。已到期聊天室即使 cleanup 尚未執行，也不會出現在最近對話。
 
-傳送或同步聊天室內容時，聊天室及其訊息的 `expires_at` 會更新為操作當下加上 `DATA_RETENTION_MINUTES`。預設 `DATA_RETENTION_MINUTES=20160`，即最後一次內容更新後保留 14 天。
+傳送或同步聊天室內容時，聊天室及其訊息的 `expires_at` 會更新為操作當下加上 `DATA_RETENTION_MINUTES`。預設 `DATA_RETENTION_MINUTES=20160`，即最後一次內容更新後保留 14 天。若 generation job 已完成但 pending 訊息尚未收到結果，對帳第一次補回結果時會同步更新 `updated_at`、聊天室期限與所有訊息期限；完成後再次讀取不會重複刷新。最近對話會先完成必要對帳，再依更新後的 `updated_at` 排序。
 
 ### 收藏圖版
 
@@ -561,6 +609,9 @@ backend/app/services/product_preview.py
 - 輸入名稱後可按「＋」或 Enter 建立。
 - 名稱空白時會聚焦名稱輸入框。
 - 建立期間會阻止重複送出。
+- 收藏頁右上角的編輯按鈕可進入資料夾編輯模式；自訂資料夾左上角會顯示「−」刪除按鈕。
+- 刪除自訂資料夾前會顯示站內確認對話框；只刪除資料夾及其收藏關聯，圖片仍保留。
+- 系統資料夾「我的最愛」不顯示刪除按鈕，也不能透過 API 刪除。
 
 ### 驗證
 

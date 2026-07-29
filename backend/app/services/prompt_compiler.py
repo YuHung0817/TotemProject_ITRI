@@ -10,7 +10,16 @@ from app.prompts.bunun import (
     PROMPT_COMPILER_INSTRUCTIONS,
 )
 from app.prompts.options import ELEMENT_OPTIONS, VARIANT_DIRECTIONS
-from app.schemas.image import GenerateRequest, MotifRevisionResolution
+from app.schemas.image import (
+    GenerateRequest,
+    MotifRevisionResolution,
+    ProductPreviewResolution,
+)
+from app.prompts.product_preview import (
+    DISPLAY_STYLE_OPTIONS,
+    PLACEMENT_OPTIONS,
+    PRODUCT_OPTIONS,
+)
 from app.core.console import safe_print
 
 settings = get_settings()
@@ -51,6 +60,68 @@ Rules:
 9. Do not invent elements, removal requests, exclusions, or color changes.
 10. Do not return IDs, file paths, URLs, assets, collection state, or any database fields.
 """.strip()
+
+
+def resolve_product_preview_instruction(
+    client: OpenAI, instruction: str, current_product: str | None = None
+) -> ProductPreviewResolution:
+    """Resolve a free-form product mockup request without inventing a reference image."""
+    system_instructions = f"""
+You convert a Chinese product-mockup request into validated JSON. Return JSON only, with:
+{{
+  "product": "",
+  "placement": "",
+  "display_style": "",
+  "additional_instruction": "",
+  "reference_product": null,
+  "changes_product": false
+}}
+
+Current product:
+{current_product or "(no current product)"}
+
+Built-in products (JSON):
+{json.dumps(list(PRODUCT_OPTIONS), ensure_ascii=False)}
+
+Built-in placements (JSON):
+{json.dumps(list(PLACEMENT_OPTIONS), ensure_ascii=False)}
+
+Built-in display styles (JSON):
+{json.dumps(list(DISPLAY_STYLE_OPTIONS), ensure_ascii=False)}
+
+Rules:
+1. Set changes_product to true only when the latest request explicitly asks for a product
+   different from Current product. Camera angle, color, material, background, composition,
+   and placement changes do not change the product.
+2. When no different product is explicitly requested, preserve Current product in product,
+   set changes_product to false, and do not infer a new product.
+3. If the requested product is the same as, or a clear alias of, one built-in product,
+   set reference_product to that exact built-in key and set product to the same key.
+4. If it is a genuinely different product, set reference_product to null and describe
+   the requested product clearly in product. Never choose an unrelated built-in product.
+5. Use an exact built-in placement key when it accurately matches. Otherwise preserve
+   the requested placement as concise text. If absent, use the first built-in placement.
+6. Use an exact built-in display-style key when it matches. Otherwise describe the
+   requested product color, background, lighting, and presentation in display_style.
+7. Put remaining material, camera, composition, or product details in additional_instruction.
+8. Do not add a product, color, material, placement, or background not requested by the user.
+""".strip()
+    response = client.responses.create(
+        model=PROMPT_COMPILER_MODEL,
+        instructions=system_instructions,
+        input=instruction.strip(),
+    )
+    text = getattr(response, "output_text", "").strip()
+    start, end = text.find("{"), text.rfind("}") + 1
+    if start < 0 or end <= start:
+        raise ValueError("Product preview instruction could not be parsed.")
+    try:
+        resolution = ProductPreviewResolution.model_validate_json(text[start:end])
+    except (ValidationError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("Product preview instruction returned invalid structured data.") from exc
+    if resolution.reference_product not in PRODUCT_OPTIONS:
+        resolution.reference_product = None
+    return resolution
 
 
 def resolve_motif_revision(

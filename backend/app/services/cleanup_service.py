@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -51,10 +51,7 @@ def cleanup_expired_data(
     )
     expired_assets = db.execute(
         select(ImageAsset.id, ImageAsset.storage_key).where(
-            or_(
-                ImageAsset.expires_at <= current,
-                ImageAsset.image_record_id.in_(expired_record_ids),
-            )
+            ImageAsset.image_record_id.in_(expired_record_ids)
         )
     ).all()
     expired_asset_ids = [row.id for row in expired_assets]

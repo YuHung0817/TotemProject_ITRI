@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import create_engine, event, select
+from sqlalchemy import create_engine, delete, event, select
 from sqlalchemy.orm import Session
 
 from app.db import Base
@@ -118,3 +118,95 @@ def test_reading_chatroom_does_not_refresh_expiry_or_sort_order() -> None:
         assert older_room.expires_at == original_expiry
         assert older_room.updated_at == original_updated_at
         assert [room.id for room in list_chatrooms(db, USER_ID)] == ["chat-2", "chat-1"]
+
+
+def test_expired_chatrooms_are_hidden_before_cleanup_runs() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        db.add(User(id=USER_ID, username="store"))
+        db.add_all(
+            [
+                Chatroom(
+                    id="expired-chat",
+                    user_id=USER_ID,
+                    title="expired",
+                    expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+                ),
+                Chatroom(
+                    id="active-chat",
+                    user_id=USER_ID,
+                    title="active",
+                    expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+                ),
+            ]
+        )
+        db.commit()
+
+        assert [room.id for room in list_chatrooms(db, USER_ID)] == ["active-chat"]
+
+
+def test_chatroom_marks_missing_generated_images_as_expired() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        db.add(User(id=USER_ID, username="store"))
+        db.commit()
+        image = save_record(db, image_payload("image-expiring"), USER_ID)
+        snapshot = ChatroomSnapshot.model_validate(
+            {
+                "id": "chat-expiring",
+                "title": "即將過期",
+                "generationExchanges": [
+                    {
+                        "id": "generation-expiring",
+                        "prompt": "山豬",
+                        "reply": "完成了！",
+                        "images": [image],
+                        "pending": False,
+                    }
+                ],
+            }
+        )
+        synced = sync_chatroom(db, snapshot, USER_ID)
+        assert synced.generationExchanges[0].expectedImageCount == 1
+        assert synced.generationExchanges[0].missingImageCount == 0
+
+        db.execute(delete(ImageRecord).where(ImageRecord.id == "image-expiring"))
+        db.commit()
+
+        expired = chatroom_snapshot(db, "chat-expiring", USER_ID)
+        exchange = expired.generationExchanges[0]
+        assert exchange.images == []
+        assert exchange.expectedImageCount == 1
+        assert exchange.missingImageCount == 1
+
+
+def test_revision_display_asset_is_persisted() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        db.add(User(id=USER_ID, username="store"))
+        db.commit()
+        snapshot = ChatroomSnapshot.model_validate(
+            {
+                "id": "chat-product-preview",
+                "title": "更換商品圖",
+                "revisionExchanges": [
+                    {
+                        "id": "revision-product-preview",
+                        "user": "更換商品圖：換成綠色",
+                        "sourceImage": "/generated/images/source.png",
+                        "reply": "新的商品圖已完成。",
+                        "displayAsset": "preview",
+                    }
+                ],
+            }
+        )
+
+        saved = sync_chatroom(db, snapshot, USER_ID)
+
+        assert saved.revisionExchanges[0].displayAsset == "preview"
+        assert (
+            chatroom_snapshot(db, "chat-product-preview", USER_ID)
+            .revisionExchanges[0]
+            .displayAsset
+            == "preview"
+        )

@@ -68,6 +68,7 @@ rm -f /etc/nginx/sites-enabled/default
 
 systemctl daemon-reload
 systemctl enable --now safu-api
+systemctl restart safu-api
 systemctl enable --now safu-cleanup.timer
 nginx -t
 systemctl enable --now nginx

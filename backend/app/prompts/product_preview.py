@@ -302,7 +302,7 @@ def build_product_mockup_prompt(request: Any, variant_index: int) -> str:
     placement_text = PLACEMENT_OPTIONS.get(request.placement, request.placement)
     display_style_text = DISPLAY_STYLE_OPTIONS.get(
         request.display_style,
-        DISPLAY_STYLE_OPTIONS["白色商品＋白底"],
+        request.display_style,
     )
     # The main UI text belongs to motif generation; preview requirements are separate.
     user_text = request.preview_prompt.strip()
@@ -332,19 +332,13 @@ STRICT TAIWANESE HIGH SCHOOL SHOULDER BAG SHAPE LOCK:
 STRICT LOWER-FLAP MOTIF POSITION AND SCALE:
 
 - Place one complete motif below the vertical midpoint, around the lower third of the flap.
-- Center the motif horizontally, but do NOT center it vertically on the entire flap.
-- Measure the visible front flap from its left edge to its right edge.
 - The motif's complete outer bounding box must be approximately 20% of that flap width.
 - In other words, the motif must be visibly small: about one fifth of the flap width.
 - Preserve the motif's aspect ratio; derive its height proportionally from that 20% width.
 - Leave generous, even, clearly visible blank flap fabric around all sides of the motif.
-- At least 40% of the flap width must remain blank on both the left and right sides.
 - Keep a clear fabric margin between the motif and the flap's bottom edge and seams.
-- Do not interpret 20% as a margin, scale reduction, or empty-space percentage.
 - Do not enlarge the motif beyond 20% of the flap width, especially not to 80%.
-- Do not fill most of the flap, turn it into an
-  all-over print, repeat it across the flap, or let it touch any flap edge or seam.
-- Scale the motif uniformly without stretching, cropping, or changing its proportions.
+- Do not fill most of the flap, turn it into an all-over print, or let it touch any flap edge or seam.
 """.rstrip()
     if request.placement == "帽簷":
         placement_lock_text = """
@@ -839,6 +833,21 @@ The motif should look physically attached to the product as one of these:
 - printed fabric band
 
 according to the requested placement.
+
+━━━━━━━━━━━━━━━━━━━━━━
+COMPLETE PRODUCT FRAMING
+━━━━━━━━━━━━━━━━━━━━━━
+
+Show the entire product inside the final image.
+
+- Do not crop, cut off, or place any part of the product outside the image boundaries.
+- Keep the product's complete body, top, bottom, left edge, and right edge visible.
+- Keep all handles, straps, closures, hardware, and other defining product parts visible.
+- Zoom out when necessary so the complete product fits naturally in the composition.
+- Leave clear breathing room between the product and every edge of the image.
+- Prefer a slightly smaller fully visible product over a large product that is cropped.
+- For unusually long straps or accessories, arrange them naturally within the frame while
+  keeping the complete product as visible and uncropped as possible.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 VISUAL STYLE

@@ -1,0 +1,33 @@
+:root {
+  --motion-duration-fast:120ms;
+  --motion-duration-short:160ms;
+  --motion-duration-medium:220ms;
+  --motion-duration-long:300ms;
+  --motion-duration-emphasized:360ms;
+  --motion-ease-standard:cubic-bezier(.2,0,0,1);
+  --motion-ease-enter:cubic-bezier(0,0,0,1);
+  --motion-ease-exit:cubic-bezier(.3,0,1,1);
+  --motion-distance-small:4px;
+  --motion-distance-medium:16px;
+  --motion-distance-page:24px;
+}
+
+@media (prefers-reduced-motion:reduce) {
+  :root {
+    --motion-duration-fast:1ms;
+    --motion-duration-short:1ms;
+    --motion-duration-medium:1ms;
+    --motion-duration-long:1ms;
+    --motion-duration-emphasized:1ms;
+  }
+
+  html {
+    scroll-behavior:auto;
+  }
+
+  .generation-placeholder::after,
+  .chat-loading-spinner,
+  .source-image-target {
+    animation:none!important;
+  }
+}

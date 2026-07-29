@@ -5,6 +5,7 @@ import random
 import uuid
 from datetime import datetime, timezone
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 
 from openai import OpenAI
@@ -28,6 +29,28 @@ from app.services.prompt_compiler import build_generation_prompt
 DEFAULT_MODEL = get_settings().openai_image_model
 DEFAULT_QUALITY = "high"
 GENERATION_SIZE = "1536x1024"
+RECOLOR_CONFIDENCE_THRESHOLD = 0.91
+LOCAL_RECOLOR_TERMS = (
+    "上方",
+    "下方",
+    "上面",
+    "下面",
+    "上下",
+    "左邊",
+    "右邊",
+    "左右",
+    "中間",
+    "中央",
+    "邊框",
+    "外框",
+    "內框",
+    "邊緣",
+    "背景",
+    "前景",
+    "局部",
+    "區域",
+    "部分",
+)
 
 
 def utc_timestamp() -> str:
@@ -76,6 +99,19 @@ def palette_instruction_from_colors(colors: list[tuple[int, int, int]]) -> str:
         + ", ".join(f"rgb{tuple(color)}" for color in colors)
         + ". The colors may exchange positions within the motif."
     )
+
+
+def requires_localized_recolor(instruction: str, record: dict[str, Any]) -> bool:
+    """Return whether a request needs spatial or element-aware image editing."""
+    compact = instruction.replace(" ", "")
+    if any(term in compact for term in LOCAL_RECOLOR_TERMS):
+        return True
+    elements = (
+        (record.get("generation") or {}).get("elements")
+        or (record.get("request") or {}).get("elements")
+        or []
+    )
+    return any(str(element).replace(" ", "") in compact for element in elements)
 
 
 def self_contained_fields(
@@ -137,9 +173,27 @@ def generate_one_image(
 def generate_random_palette_variants(
     client: OpenAI, request: GenerateRequest
 ) -> list[dict[str, Any]]:
-    """Generate one motif, then create four geometry-identical random palette versions."""
-    selected_palettes = random.sample(list(PALETTE_COLORS), k=4)
-    prompt = build_generation_prompt(client, request, 0)
+    """Generate four motif variants, then enforce one shared palette with Pillow."""
+    selected_colors = list(dict.fromkeys(tuple(color.rgb) for color in request.colors))
+    if selected_colors:
+        target_palette = (
+            [(255, 255, 255), selected_colors[0]]
+            if len(selected_colors) == 1
+            else selected_colors
+        )
+        palette_name = "自訂：" + "、".join(color.name for color in request.colors)
+    else:
+        palette_name = random.choice(list(PALETTE_COLORS))
+        target_palette = PALETTE_COLORS[palette_name]
+    base_prompt = build_generation_prompt(client, request, 0)
+    palette_assignment = palette_instruction_from_colors(target_palette)
+    prompt = f"""{base_prompt}
+
+Generate four separate output images. Keep the same requested motif direction, but render
+four distinct motif variations using the same palette specified below. Do not create a collage
+or contact sheet. Do not add gradients, shading, texture, or colors outside this RGB set.
+Palette name: {palette_name!r}.
+{palette_assignment}"""
     safe_print(f"[image generation] prompt chars: {len(prompt)}")
     response = client.images.generate(
         model=DEFAULT_MODEL,
@@ -147,22 +201,24 @@ def generate_random_palette_variants(
         size=GENERATION_SIZE,
         quality=DEFAULT_QUALITY,
         output_format="png",
+        n=4,
     )
-    image_data = response.data[0]
-    revised_prompt = getattr(image_data, "revised_prompt", None)
-    print_prompt_comparison(prompt, revised_prompt)
-    if not image_data.b64_json:
-        raise RuntimeError("Image API did not return b64_json data.")
+    if len(response.data) != 4:
+        raise RuntimeError(f"Image API returned {len(response.data)} images; expected 4.")
 
-    source = Image.open(BytesIO(base64.b64decode(image_data.b64_json))).convert("RGB")
-    source = crop_horizontal_background_margin(source)
-    source_palette = extract_dominant_palette(source, color_count=5)
     created_at = utc_timestamp()
     records = []
+    for image_data in response.data:
+        revised_prompt = getattr(image_data, "revised_prompt", None)
+        print_prompt_comparison(prompt, revised_prompt)
+        if not image_data.b64_json:
+            raise RuntimeError("Image API did not return b64_json data.")
 
-    for palette_name in selected_palettes:
+        source = Image.open(BytesIO(base64.b64decode(image_data.b64_json))).convert("RGB")
+        source = crop_horizontal_background_margin(source)
+        source_palette = extract_dominant_palette(source, color_count=len(target_palette))
+        recolored = recolor_flat_motif(source, source_palette, target_palette)
         image_id = uuid.uuid4().hex[:12]
-        recolored = recolor_flat_motif(source, source_palette, PALETTE_COLORS[palette_name])
         filename, original_filename = save_source_image(recolored, image_id, crop_margin=False)
         records.append(
             {
@@ -331,9 +387,22 @@ def recolor_existing_variant(
     instruction: str,
     client: OpenAI | None = None,
 ) -> dict[str, Any]:
-    """Recolor an existing motif with Pillow only; no generative API call."""
+    """Recolor with Pillow when resolvable, otherwise fall back to an image edit."""
     source_path = image_path(old["original_filename"])
     source = Image.open(source_path).convert("RGB")
+    if instruction == "隨機更換配色" and client is not None:
+        safe_print("[換色判斷] 留空隨機換色，直接使用 Image Edit。")
+        return edit_palette_with_image_model(
+            old,
+            "請自由選擇一組與原圖不同、視覺協調且適合此圖騰的配色，"
+            "並將現有圖騰區塊隨意換色。",
+            client,
+            source_path,
+            user_instruction=instruction,
+        )
+    if client is not None and requires_localized_recolor(instruction, old):
+        safe_print("[換色判斷] 偵測到指定區域或元素，改用 Image Edit。")
+        return edit_palette_with_image_model(old, instruction, client, source_path)
     compact = instruction.replace(" ", "")
     replacement: tuple[str, str] | None = next(
         (
@@ -378,8 +447,17 @@ matches multiple palette entries with different shades, include every matching s
         )
         confidence = float(parsed.get("confidence", 0))
         palette_set = {tuple(color) for color in current_palette}
-        if confidence < 0.6:
-            raise ValueError("無法確定要替換的顏色，請更明確描述來源色與目標色。")
+        if confidence < RECOLOR_CONFIDENCE_THRESHOLD:
+            safe_print(
+                f"[換色判斷] 信心分數過低 "
+                f"({confidence:.2f} < {RECOLOR_CONFIDENCE_THRESHOLD:.2f})，"
+                "改用 Image Edit。"
+            )
+            return edit_palette_with_image_model(old, instruction, client, source_path)
+        safe_print(
+            f"[換色判斷] 信心分數 ≥ {RECOLOR_CONFIDENCE_THRESHOLD:.2f} "
+            f"({confidence:.2f} ≥ {RECOLOR_CONFIDENCE_THRESHOLD:.2f})。"
+        )
         for item in parsed.get("replacements", [])[:4]:
             source_rgb = tuple(int(value) for value in item.get("source_rgb", []))
             target_rgb = tuple(max(0, min(255, int(value))) for value in item.get("target_rgb", []))
@@ -389,7 +467,8 @@ matches multiple palette entries with different shades, include every matching s
                 )
                 replacements.append((source_rgb, target_rgb, label))
         if not replacements:
-            raise ValueError("沒有找到可安全執行的顏色替換。")
+            safe_print("[換色判斷] 沒有有效的像素替換項目，改用 Image Edit。")
+            return edit_palette_with_image_model(old, instruction, client, source_path)
         expanded: dict[tuple[int, int, int], tuple[tuple[int, int, int], str]] = {}
         for source_rgb, target_rgb, label in replacements:
             source_h, source_s, source_v = colorsys.rgb_to_hsv(
@@ -410,6 +489,7 @@ matches multiple palette entries with different shades, include every matching s
             (source_rgb, target_and_label[0], target_and_label[1])
             for source_rgb, target_and_label in expanded.items()
         ]
+        safe_print("[換色判斷] 使用 Pillow 換色。")
         safe_print(
             "[debug:gai-color-resolution] "
             + json.dumps(
@@ -476,4 +556,82 @@ matches multiple palette entries with different shades, include every matching s
             "compiled_prompt": old.get("totem_prompt") or old.get("prompt", ""),
         },
         "palette": palette_record(recolored),
+        "_used_image_api": False,
+    }
+
+
+def edit_palette_with_image_model(
+    old: dict[str, Any],
+    instruction: str,
+    client: OpenAI,
+    source_path: Path,
+    *,
+    user_instruction: str | None = None,
+) -> dict[str, Any]:
+    """Ask the image model to interpret a palette edit that Pillow cannot resolve."""
+    prompt = f"""Edit the uploaded totem artwork according to this color request:
+{instruction}
+
+This is a COLOR-ONLY edit. Preserve the original totem design as closely as possible:
+- Keep the exact composition, geometry, shapes, outlines, symmetry, spacing, proportions,
+  orientation, canvas size, and flat illustration style.
+- Do not add, remove, replace, redraw, move, resize, or restyle any motif element.
+- Do not introduce gradients, shadows, highlights, texture, depth, text, or new details.
+- Change only the color of the element or region identified by the user.
+- If the user names an element, such as a boar, recolor only that element.
+- If the user gives only a target color and does not identify a region, inspect the artwork
+  and choose the most visually suitable existing motif region or color group to recolor.
+- Keep all unaffected regions and colors as close to the uploaded image as possible.
+
+The uploaded image is the source of truth. Minimize every change beyond the requested color edit."""
+    with source_path.open("rb") as image_file:
+        response = client.images.edit(
+            model=DEFAULT_MODEL,
+            image=image_file,
+            prompt=prompt,
+            size=GENERATION_SIZE,
+            quality=DEFAULT_QUALITY,
+            output_format="png",
+        )
+    image_data = response.data[0]
+    if not image_data.b64_json:
+        raise RuntimeError("Image API did not return edited motif image data.")
+
+    edited = Image.open(BytesIO(base64.b64decode(image_data.b64_json))).convert("RGB")
+    image_id = uuid.uuid4().hex[:12]
+    filename, original_filename = save_source_image(edited, image_id, crop_margin=False)
+    return {
+        "id": image_id,
+        "filename": filename,
+        "url": image_url(filename),
+        "original_filename": original_filename,
+        "original_url": image_url(original_filename),
+        "totem_url": image_url(filename),
+        "created_at": utc_timestamp(),
+        "prompt": user_instruction or instruction,
+        "revised_prompt": getattr(image_data, "revised_prompt", None),
+        "totem_prompt": old.get("totem_prompt") or old.get("prompt"),
+        "request": old["request"],
+        "assets": {
+            "motif": {
+                "type": "motif",
+                "filename": filename,
+                "url": image_url(filename),
+                "saved": False,
+                "favorite": False,
+                "parameters": None,
+            }
+        },
+        "palette_name": "AI 判斷換色",
+        "score": None,
+        "score_reason": None,
+        "files": {"repeat": filename, "original": original_filename},
+        "generation": old.get("generation")
+        or {
+            "user_prompt": old.get("request", {}).get("prompt", ""),
+            "elements": old.get("request", {}).get("elements", []),
+            "compiled_prompt": old.get("totem_prompt") or old.get("prompt", ""),
+        },
+        "palette": palette_record(edited),
+        "_used_image_api": True,
     }

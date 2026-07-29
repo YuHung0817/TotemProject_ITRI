@@ -97,14 +97,18 @@ UNIQUE(collection_id, image_asset_id)
 
 ```text
 聊天室 expires_at = 最後一次內容更新時間（UTC）+ 14 天
-圖片 expires_at = created_at（UTC）+ 14 天
+新圖片版本 expires_at = 實際生成完成時間（UTC）+ 14 天
+既有版本產生新商品圖或輔助圖 = 本次生成完成時間（UTC）+ 14 天
 ```
 
 規則如下：
 
 - 聊天室到期時，刪除其訊息與相關生成紀錄。
-- 聊天室依最後一次內容更新排序；單純打開或讀取聊天室不更新排序，也不延長到期時間。
-- 每個圖片 asset 依自己的建立時間到期；收藏不會延長圖片期限。
+- 聊天室依最後一次內容更新排序；單純打開或讀取聊天室不更新排序，也不延長到期時間。generation job 對帳只有在第一次補回真正遺失的完成結果時，才同步刷新聊天室、訊息期限與排序時間；列表在對帳後重新排序，並排除已到期聊天室。
+- 一個 `ImageRecord` 是一個完整版本；旗下圖騰、商品圖、輔助圖與原始檔共用版本的 `expires_at`。
+- 成功產生新商品圖或輔助圖時同步刷新該版本及所有 active assets；單純讀取、收藏或變更 saved 狀態不延長期限。
+- 修改商品圖會建立具有獨立期限的衍生 record；舊版本期限不受影響。
+- 多個版本可共用相同圖騰 `storage_key`；實體檔案只在最後一個引用版本到期或刪除後移除。
 - 收藏資料夾永久保留；裡面的圖片到期後只清除圖片與收藏關聯，空資料夾不刪除。
 - 使用者手動刪除圖片時，立即從 UI 消失並進入相同的實體清理流程。
 - session 不使用 14 天資料規則，另設較短的閒置與絕對期限。
@@ -112,7 +116,7 @@ UNIQUE(collection_id, image_asset_id)
 
 每日由 systemd timer 執行清理工作。清理程序必須可重複執行：
 
-1. 找出 `expires_at <= now` 的資料。
+1. 找出 `ImageRecord.expires_at <= now` 的圖片版本及其他到期資料。
 2. 將圖片狀態改為 `deleting` 並提交 transaction。
 3. 只允許刪除設定之圖片根目錄內的檔案，拒絕 `..`、絕對路徑及 symlink 越界。
 4. 刪除圖片及衍生檔案。
@@ -127,7 +131,7 @@ UNIQUE(collection_id, image_asset_id)
 目前介面依已確認的需求呈現：
 
 - App bar 說明圖片只保留 14 天，提醒使用者下載想保留的圖片；
-- 「我的圖片」與「我的收藏」中的每張圖片，在圖片外側左下方以小字顯示明確到期日期與時間；
+- 「我的圖片」與收藏資料夾內的縮圖不顯示到期文字；點開支援雙指縮放的全螢幕圖片檢視器後，在底部顯示明確到期日期與時間；
 - 聊天室圖片不重複顯示到期文字；
 - 圖片詳情及圖片檢視器提供下載操作。
 
@@ -236,6 +240,8 @@ UNIQUE(collection_id, image_asset_id)
 - [x] 盤點 `safe_print`、`print`、traceback 與 HTTP 錯誤回應，Log 僅允許 operation、job/image ID、狀態、錯誤類型、字數及數量等安全摘要。
 - [x] 移除完整 Prompt、修改指令、完整 request body、圖片 URL 與 traceback Log。
 - [x] 一般化對外 `500` 錯誤訊息，不回傳第三方 SDK 原始例外、內部檔案路徑或資料庫細節。
+- [x] API 錯誤統一為 `detail.code` 與安全中文 `detail.message`；FastAPI `422`、未知例外及第三方錯誤均經全域處理。
+- [x] 前端只依已知錯誤代碼顯示中文，未知代碼、網路錯誤與舊聊天室英文失敗訊息使用中文通用提示。
 - [x] 確認程式不記錄 API Token、Session Token、Cookie、密碼或完整 request headers。
 - [x] 新增 Log 安全自動測試，以敏感標記確認 stdout/stderr 與錯誤回應不洩漏內容。
 - [x] 建置並掃描前端 production bundle、前端原始碼與公開資源，確認不存在 `OPENAI_API_KEY` 或疑似 API Token。
@@ -264,6 +270,7 @@ UNIQUE(collection_id, image_asset_id)
 - [ ] HTTP 強制轉 HTTPS，cookie 只在 HTTPS 傳送。
 - [x] 本機驗收：登入暴力嘗試會回傳 `429`；生成 endpoint 的單一 active job 與每小時上限已有自動測試。
 - [x] 自動測試確認相同 idempotency key 與同帳號並行請求不會建立第二個 active job。
+- [x] 自動測試確認登入、未授權、FastAPI 驗證及圖片逾時回應使用安全中文錯誤結構。
 - [ ] 測試資料設為已過期後，timer 能刪除聊天室、訊息、收藏關聯、metadata 與所有圖片檔案。
 - [ ] 清理中途故意失敗後重跑，能完成且不誤刪其他路徑。
 - [ ] 收藏中的圖片仍會在 14 天後刪除。

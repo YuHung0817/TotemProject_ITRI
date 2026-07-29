@@ -41,6 +41,12 @@ def test_password_hash_and_server_session_cookie() -> None:
                 json={"username": "store", "password": "wrong-password"},
             )
             assert failed.status_code == 401
+            assert failed.json() == {
+                "detail": {
+                    "code": "invalid_credentials",
+                    "message": "帳號或密碼錯誤。",
+                }
+            }
             response = client.post(
                 "/api/v1/auth/login",
                 json={"username": "store", "password": "a-secure-test-password"},
@@ -59,6 +65,13 @@ def test_password_hash_and_server_session_cookie() -> None:
                 assert stored_session.id != token
 
             assert client.post("/api/v1/auth/logout").status_code == 204
-            assert client.get("/api/v1/auth/me").status_code == 401
+            unauthorized = client.get("/api/v1/auth/me")
+            assert unauthorized.status_code == 401
+            assert unauthorized.json() == {
+                "detail": {
+                    "code": "authentication_required",
+                    "message": "請先登入後再繼續操作。",
+                }
+            }
     finally:
         app.dependency_overrides.clear()

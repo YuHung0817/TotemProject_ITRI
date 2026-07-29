@@ -68,6 +68,59 @@ def test_idempotency_and_one_active_job(monkeypatch) -> None:
         assert completed_duplicate.status == "succeeded"
 
 
+def test_detail_page_preview_and_motif_generation_share_one_active_job(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(generation_job_service, "get_settings", lambda: limits())
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        add_user(db)
+        motif_job = acquire_generation_job(
+            db,
+            "motif-request-0001",
+            {"operation": "motif_generate"},
+            USER_ID,
+        )
+
+        with pytest.raises(HTTPException) as preview_error:
+            acquire_generation_job(
+                db,
+                "preview-request-0001",
+                {
+                    "operation": "random_product_preview",
+                    "image_id": "image-1",
+                },
+                USER_ID,
+            )
+
+        assert preview_error.value.status_code == 429
+        assert preview_error.value.detail["code"] == "another_generation_in_progress"
+        assert preview_error.value.detail["job_id"] == motif_job.id
+
+        complete_generation_job(db, motif_job, [])
+        preview_job = acquire_generation_job(
+            db,
+            "preview-request-0001",
+            {
+                "operation": "random_product_preview",
+                "image_id": "image-1",
+            },
+            USER_ID,
+        )
+
+        with pytest.raises(HTTPException) as motif_error:
+            acquire_generation_job(
+                db,
+                "motif-request-0002",
+                {"operation": "motif_generate"},
+                USER_ID,
+            )
+
+        assert motif_error.value.status_code == 429
+        assert motif_error.value.detail["code"] == "another_generation_in_progress"
+        assert motif_error.value.detail["job_id"] == preview_job.id
+
+
 def test_stale_job_is_failed_before_new_job_is_acquired(monkeypatch) -> None:
     monkeypatch.setattr(generation_job_service, "get_settings", lambda: limits(stale=10))
     engine = sqlite_engine()
@@ -147,12 +200,16 @@ def test_completed_job_reconciles_late_pending_chat_message(monkeypatch) -> None
         )
         db.add_all((room, user_message, assistant))
         db.commit()
+        original_updated_at = room.updated_at
+        original_expiry = room.expires_at
 
         # Opening a chatroom reconciles a job that finished while the user was
         # viewing another page.
         snapshot = chatroom_snapshot(db, room.id, USER_ID)
         db.refresh(assistant)
         db.refresh(image)
+        db.refresh(room)
+        db.refresh(user_message)
 
         assert snapshot.revisionExchanges[0].pending is False
         assert snapshot.revisionExchanges[0].image is not None
@@ -161,3 +218,14 @@ def test_completed_job_reconciles_late_pending_chat_message(monkeypatch) -> None
         assert "已依照你的要求" in assistant.content
         assert image.chatroom_id == room.id
         assert image.message_id == assistant.id
+        assert room.updated_at > original_updated_at
+        assert room.expires_at > original_expiry
+        assert user_message.expires_at == room.expires_at
+        assert assistant.expires_at == room.expires_at
+
+        reconciled_updated_at = room.updated_at
+        reconciled_expiry = room.expires_at
+        chatroom_snapshot(db, room.id, USER_ID)
+        db.refresh(room)
+        assert room.updated_at == reconciled_updated_at
+        assert room.expires_at == reconciled_expiry

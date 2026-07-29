@@ -34,12 +34,14 @@ def touch_chatroom(room: Chatroom) -> None:
 
 
 def get_chatroom(db: Session, chatroom_id: str, user_id: str) -> Chatroom:
+    now = datetime.now(timezone.utc)
     room = db.scalar(
         select(Chatroom)
         .where(
             Chatroom.id == chatroom_id,
             Chatroom.user_id == user_id,
             Chatroom.deleted_at.is_(None),
+            Chatroom.expires_at > now,
         )
         .options(selectinload(Chatroom.messages))
     )
@@ -115,6 +117,14 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
     retained_ids: set[str] = set()
     for exchange in snapshot.generationExchanges:
         created_at = timestamp(exchange.createdAt)
+        existing_assistant = db.get(
+            Message, message_id(room.id, exchange.id, "assistant")
+        )
+        existing_expected = int(
+            ((existing_assistant.content_data or {}) if existing_assistant else {}).get(
+                "expectedImageCount", 0
+            )
+        )
         user_message = upsert_message(
             db,
             room,
@@ -126,6 +136,8 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
                 "createdAt": exchange.createdAt,
                 "prompt": exchange.prompt,
                 "elements": exchange.elements,
+                "colors": [color.model_dump() for color in exchange.colors],
+                "carrier": exchange.carrier,
             },
             created_at,
         )
@@ -140,6 +152,11 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
                 "createdAt": exchange.createdAt,
                 "reply": exchange.reply,
                 "pending": exchange.pending,
+                "expectedImageCount": max(
+                    existing_expected,
+                    exchange.expectedImageCount,
+                    len(exchange.images),
+                ),
             },
             created_at,
         )
@@ -148,6 +165,14 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
 
     for exchange in snapshot.revisionExchanges:
         created_at = timestamp(exchange.createdAt)
+        existing_assistant = db.get(
+            Message, message_id(room.id, exchange.id, "assistant")
+        )
+        existing_expected = bool(
+            ((existing_assistant.content_data or {}) if existing_assistant else {}).get(
+                "expectedImage", False
+            )
+        )
         user_message = upsert_message(
             db,
             room,
@@ -173,6 +198,10 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
                 "createdAt": exchange.createdAt,
                 "reply": exchange.reply,
                 "pending": exchange.pending,
+                "displayAsset": exchange.displayAsset,
+                "expectedImage": existing_expected
+                or exchange.expectedImage
+                or exchange.image is not None,
             },
             created_at,
         )
@@ -227,18 +256,28 @@ def chatroom_snapshot(db: Session, chatroom_id: str, user_id: str) -> ChatroomSn
         user_data = user.content_data or {}
         assistant_data = assistant.content_data or {}
         if message_type == "generation":
+            expected_image_count = int(
+                assistant_data.get("expectedImageCount", len(images))
+            )
             generation_exchanges.append(
                 {
                     "id": exchange_id,
                     "createdAt": user_data.get("createdAt"),
                     "prompt": user_data.get("prompt", user.content),
                     "elements": user_data.get("elements", []),
+                    "colors": user_data.get("colors", []),
+                    "carrier": user_data.get("carrier"),
                     "reply": assistant_data.get("reply", assistant.content),
                     "images": images,
                     "pending": assistant_data.get("pending", False),
+                    "expectedImageCount": expected_image_count,
+                    "missingImageCount": max(expected_image_count - len(images), 0),
                 }
             )
         else:
+            expected_image = bool(
+                assistant_data.get("expectedImage", bool(images))
+            )
             revision_exchanges.append(
                 {
                     "id": exchange_id,
@@ -248,20 +287,49 @@ def chatroom_snapshot(db: Session, chatroom_id: str, user_id: str) -> ChatroomSn
                     "reply": assistant_data.get("reply", assistant.content),
                     "image": images[0] if images else None,
                     "pending": assistant_data.get("pending", False),
+                    "displayAsset": assistant_data.get("displayAsset", "motif"),
+                    "expectedImage": expected_image,
+                    "imageExpired": expected_image and not images,
                 }
             )
     return ChatroomSnapshot(
         id=room.id,
         title=room.title,
+        expires_at=room.expires_at,
         revisionExchanges=revision_exchanges,
         generationExchanges=generation_exchanges,
     )
 
 
 def list_chatrooms(db: Session, user_id: str) -> list[ChatroomSnapshot]:
+    now = datetime.now(timezone.utc)
+    from app.services.generation_job_service import reconcile_chatroom_generation_jobs
+
+    candidate_ids = db.scalars(
+        select(Chatroom.id)
+        .where(
+            Chatroom.user_id == user_id,
+            Chatroom.deleted_at.is_(None),
+            Chatroom.expires_at > now,
+        )
+        .order_by(Chatroom.updated_at.desc())
+        .limit(30)
+    ).all()
+    reconciled = False
+    for chatroom_id in candidate_ids:
+        reconciled = (
+            reconcile_chatroom_generation_jobs(db, chatroom_id, user_id) or reconciled
+        )
+    if reconciled:
+        db.commit()
+
     ids = db.scalars(
         select(Chatroom.id)
-        .where(Chatroom.user_id == user_id, Chatroom.deleted_at.is_(None))
+        .where(
+            Chatroom.user_id == user_id,
+            Chatroom.deleted_at.is_(None),
+            Chatroom.expires_at > datetime.now(timezone.utc),
+        )
         .order_by(Chatroom.updated_at.desc())
         .limit(30)
     ).all()

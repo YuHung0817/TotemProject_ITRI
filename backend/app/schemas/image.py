@@ -1,6 +1,18 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class ColorTag(BaseModel):
+    name: str = Field(min_length=1, max_length=20)
+    rgb: tuple[int, int, int]
+
+    @field_validator("rgb")
+    @classmethod
+    def validate_rgb(cls, value: tuple[int, int, int]) -> tuple[int, int, int]:
+        if any(channel < 0 or channel > 255 for channel in value):
+            raise ValueError("RGB channels must be between 0 and 255")
+        return value
 
 
 class GenerateRequest(BaseModel):
@@ -8,17 +20,31 @@ class GenerateRequest(BaseModel):
 
     prompt: str = Field(default="", description="想表達的圖騰需求。")
     elements: list[str] = Field(default_factory=list, description="布農圖騰元素。")
+    colors: list[ColorTag] = Field(default_factory=list, max_length=10)
+    carrier: str | None = Field(default=None, max_length=50)
     palette_instruction: str = Field(default="", exclude=True)
     excluded_elements: list[str] = Field(default_factory=list, exclude=True)
 
 
 class ProductPreviewRequest(BaseModel):
+    instruction: str = Field(default="", max_length=500)
     product: str = Field(default="托特包")
     placement: str = Field(default="AI自動決定位置")
     display_style: str = Field(default="白色商品＋白底")
     preview_prompt: str = Field(default="", exclude=True)
     preview_size: str = Field(default="1024x1024")
     preview_quality: str = Field(default="medium")
+
+
+class ProductPreviewResolution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    product: str = Field(min_length=1, max_length=120)
+    placement: str = Field(min_length=1, max_length=120)
+    display_style: str = Field(min_length=1, max_length=120)
+    additional_instruction: str = Field(default="", max_length=500)
+    reference_product: str | None = Field(default=None, max_length=50)
+    changes_product: bool = False
 
 
 class RegenerateRequest(BaseModel):

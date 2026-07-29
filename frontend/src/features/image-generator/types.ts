@@ -15,9 +15,15 @@ export type ImageRecord = {
     request?:{elements?:string[]} 
     assets?: Partial<Record<AssetType, ImageAsset>>;
 };
+export type ColorTag = {
+  name:string;
+  rgb:[number,number,number];
+};
 export type GenerateRequest = { 
     prompt:string; 
-    elements:string[] 
+    elements:string[];
+    colors:ColorTag[];
+    carrier:string|null;
 };
 
 export type AssetType = "motif" | "preview" | "chart";

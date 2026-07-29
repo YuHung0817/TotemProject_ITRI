@@ -32,11 +32,11 @@ export function LoginPage({onLogin}:{onLogin:(user:User)=>void}) {
 
   return <main className="login-page">
     <form className="login-card" onSubmit={submit}>
-      <div className="login-mark">TOTEM</div>
+      <div className="login-mark">AI</div>
       <h1>商家登入</h1>
-      <p>請使用部署時建立的單一商家帳號。</p>
-      <label>帳號<input autoComplete="username" value={username} onChange={event=>setUsername(event.target.value)} required/></label>
-      <label>密碼<input type="password" autoComplete="current-password" value={password} onChange={event=>setPassword(event.target.value)} required/></label>
+      <p>請使用單一商家帳號登入</p>
+      <label>帳號<input autoComplete="username" value={username} onChange={event=>setUsername(event.target.value)} onInvalid={event=>event.currentTarget.setCustomValidity("請輸入帳號")} onInput={event=>event.currentTarget.setCustomValidity("")} required/></label>
+      <label>密碼<input type="password" autoComplete="current-password" value={password} onChange={event=>setPassword(event.target.value)} onInvalid={event=>event.currentTarget.setCustomValidity("請輸入密碼")} onInput={event=>event.currentTarget.setCustomValidity("")} required/></label>
       {error && <div className="login-error" role="alert">{error}</div>}
       <button type="submit" disabled={busy}>{busy ? "登入中…" : "登入"}</button>
     </form>

@@ -7,6 +7,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.errors import safe_error_detail
 from app.core.config import get_settings
 from app.db.models import ApiUsage, Chatroom, GenerationJob, ImageRecord as ImageRecordModel, Message
 from app.schemas.generation_job import GenerationJobResponse
@@ -23,9 +24,9 @@ def _chat_result_message(job: GenerationJob) -> str:
     if operation in {"product_preview", "random_product_preview", "product_preview_variant"}:
         return "新的商品圖已完成；圖騰本身保持不變。"
     if operation == "regenerate":
-        return "已依照你的要求產生新的圖騰；原圖與商品預覽都已保留。"
+        return "已依照你的要求產生新的圖騰。"
     count = len(job.result_record_ids or [])
-    return f"完成了！這是相同圖案的 {count} 組配色。"
+    return f"完成了！這是相同配色的 {count} 種圖騰提案。"
 
 
 def sync_generation_job_to_chat(db: Session, job: GenerationJob) -> bool:
@@ -52,6 +53,8 @@ def sync_generation_job_to_chat(db: Session, job: GenerationJob) -> bool:
     )
     if assistant is None:
         return False
+    if not bool((assistant.content_data or {}).get("pending", False)):
+        return False
     reply = _chat_result_message(job)
     data = dict(assistant.content_data or {})
     data.update({"reply": reply, "pending": False})
@@ -68,10 +71,21 @@ def sync_generation_job_to_chat(db: Session, job: GenerationJob) -> bool:
                 ImageRecordModel.deleted_at.is_(None),
             )
         ).all()
+        if assistant.message_type == "generation":
+            data["expectedImageCount"] = max(
+                int(data.get("expectedImageCount", 0)), len(records)
+            )
+        else:
+            data["expectedImage"] = bool(records)
+        assistant.content_data = data
         for record in records:
             record.chatroom_id = room.id
             record.message_id = assistant.id
-    room.updated_at = utc_now()
+    # Reconciliation represents a real, previously missing assistant update.
+    # Keep ordering and retention in sync instead of changing only updated_at.
+    from app.services.chat_service import touch_chatroom
+
+    touch_chatroom(room)
     return True
 
 
@@ -236,7 +250,7 @@ def fail_generation_job(db: Session, job_id: str, error: Exception) -> None:
     now = utc_now()
     job.status = "failed"
     job.error_message = (
-        str(error.detail)[:500]
+        safe_error_detail(error.status_code, error.detail)["message"]
         if isinstance(error, HTTPException) and error.status_code < 500
         else "圖片生成失敗，請稍後重試。"
     )
