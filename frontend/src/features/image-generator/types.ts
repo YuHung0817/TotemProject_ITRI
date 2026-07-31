@@ -12,7 +12,7 @@ export type ImageRecord = {
     totem_url?:string; 
     palette_name?:string; 
     generation?:{elements?:string[]}; 
-    request?:{elements?:string[]} 
+    request?:{elements?:string[];carrier?:string|null}
     assets?: Partial<Record<AssetType, ImageAsset>>;
 };
 export type ColorTag = {

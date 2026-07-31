@@ -393,6 +393,26 @@ def generate_images(
     try:
         new_records = generate_random_palette_variants(client(), request)
         saved_records = save_records(db, new_records, user.id)
+        if request.carrier:
+            product = (
+                request.carrier
+                if request.carrier in PRODUCT_PLACEMENT_OPTIONS
+                else random.choice(list(PRODUCT_PLACEMENT_OPTIONS))
+            )
+            completed_records: list[dict] = []
+            for record in saved_records:
+                preview_request = ProductPreviewRequest(
+                    product=product,
+                    placement="AI自動決定位置",
+                    display_style="白色商品＋白底",
+                )
+                preview_result = generate_preview_result(record, preview_request)
+                current_record = find_record(db, record["id"], user.id)
+                add_preview(current_record, preview_request, preview_result)
+                completed_records.append(
+                    save_record(db, current_record, user.id, refresh_expiry=True)
+                )
+            saved_records = completed_records
         complete_generation_job(db, job, [record["id"] for record in saved_records])
     except HTTPException as exc:
         fail_generation_job(db, job.id, exc)

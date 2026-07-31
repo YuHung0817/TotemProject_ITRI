@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 from app.schemas.image import ColorTag, ImageRecord
 
@@ -41,6 +41,13 @@ class ChatroomSnapshot(BaseModel):
     expires_at: datetime | None = None
     revisionExchanges: list[RevisionExchangeSnapshot] = Field(default_factory=list)
     generationExchanges: list[GenerationExchangeSnapshot] = Field(default_factory=list)
+
+    @field_serializer("expires_at", when_used="json")
+    def serialize_expires_at(self, value: datetime | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.replace(tzinfo=value.tzinfo or timezone.utc).astimezone(timezone.utc)
+        return normalized.isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 class ChatroomUpdate(BaseModel):

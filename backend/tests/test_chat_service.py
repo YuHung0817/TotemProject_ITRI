@@ -46,6 +46,16 @@ def image_payload(image_id: str) -> dict:
     }
 
 
+def test_chatroom_expiry_json_marks_naive_database_time_as_utc() -> None:
+    snapshot = ChatroomSnapshot(
+        id="chat-timezone",
+        title="Timezone",
+        expires_at=datetime(2026, 7, 30, 3, 26),
+    )
+
+    assert snapshot.model_dump(mode="json")["expires_at"] == "2026-07-30T03:26:00Z"
+
+
 def test_sync_chatroom_splits_exchanges_and_links_images() -> None:
     engine = sqlite_engine()
     with Session(engine) as db:
