@@ -6,6 +6,8 @@ from fastapi import HTTPException
 ERROR_MESSAGES = {
     "authentication_required": "請先登入後再繼續操作。",
     "invalid_credentials": "帳號或密碼錯誤。",
+    "session_already_active": "此帳號目前已在其他裝置登入。",
+    "invalid_replacement_challenge": "登入確認已失效，請重新登入。",
     "too_many_login_attempts": "登入嘗試次數過多，請稍後再試。",
     "invalid_request_origin": "無法驗證請求來源。",
     "invalid_request": "輸入內容有誤，請檢查後再試。",

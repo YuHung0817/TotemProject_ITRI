@@ -6,10 +6,20 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import CurrentUser
+from app.api.errors import api_error
 from app.core.config import get_settings
+from app.db.models import User
 from app.db.session import get_db
-from app.schemas.auth import AuthenticatedUser, LoginRequest
-from app.services.auth_service import authenticate_user, create_session, revoke_session
+from app.schemas.auth import AuthenticatedUser, LoginRequest, ReplaceSessionRequest
+from app.services.auth_service import (
+    as_utc,
+    authenticate_user,
+    consume_replacement_challenge,
+    create_replacement_challenge,
+    create_session_if_available,
+    replace_user_sessions,
+    revoke_session,
+)
 
 
 router = APIRouter(prefix="/auth")
@@ -43,6 +53,19 @@ def clear_login_failures(key: str) -> None:
         failed_logins.pop(key, None)
 
 
+def set_session_cookie(response: Response, token: str) -> None:
+    settings = get_settings()
+    response.set_cookie(
+        key=settings.session_cookie_name,
+        value=token,
+        max_age=settings.session_ttl_minutes * 60,
+        secure=settings.session_cookie_secure,
+        httponly=True,
+        samesite="strict",
+        path="/",
+    )
+
+
 @router.post("/login", response_model=AuthenticatedUser)
 def login(
     credentials: LoginRequest,
@@ -57,17 +80,44 @@ def login(
         record_login_failure(key)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid username or password")
     clear_login_failures(key)
-    settings = get_settings()
-    token = create_session(db, user)
-    response.set_cookie(
-        key=settings.session_cookie_name,
-        value=token,
-        max_age=settings.session_ttl_minutes * 60,
-        secure=settings.session_cookie_secure,
-        httponly=True,
-        samesite="strict",
-        path="/",
-    )
+    token, sessions = create_session_if_available(db, user)
+    if sessions:
+        challenge = create_replacement_challenge(
+            user.id,
+            {session.id for session in sessions},
+        )
+        raise api_error(
+            status.HTTP_409_CONFLICT,
+            "session_already_active",
+            challenge=challenge,
+            active_since=as_utc(
+                min(session.created_at for session in sessions)
+            ).isoformat(),
+            expires_in_seconds=get_settings().session_replacement_challenge_minutes * 60,
+        )
+    if token is None:
+        raise RuntimeError("Login session creation returned no token")
+    set_session_cookie(response, token)
+    return AuthenticatedUser(id=user.id, username=user.username)
+
+
+@router.post("/login/replace", response_model=AuthenticatedUser)
+def replace_login(
+    request: ReplaceSessionRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> AuthenticatedUser:
+    challenge_data = consume_replacement_challenge(request.challenge)
+    if challenge_data is None:
+        raise api_error(status.HTTP_409_CONFLICT, "invalid_replacement_challenge")
+    user_id, expected_session_ids = challenge_data
+    user = db.get(User, user_id)
+    if user is None:
+        raise api_error(status.HTTP_409_CONFLICT, "invalid_replacement_challenge")
+    token = replace_user_sessions(db, user, expected_session_ids)
+    if token is None:
+        raise api_error(status.HTTP_409_CONFLICT, "invalid_replacement_challenge")
+    set_session_cookie(response, token)
     return AuthenticatedUser(id=user.id, username=user.username)
 
 

@@ -24,7 +24,7 @@
 - 單一商家帳號初始化、Argon2id 密碼 hash、伺服器端 Session，以及登入／狀態／登出 API。
 - 圖片、收藏、聊天室、生成工作與實際圖片檔案均加入 Session 和 ownership 驗證。
 - Session Cookie 使用 HttpOnly、SameSite=Strict；正式環境啟用 Secure，並驗證修改請求的 Origin。
-- 登入失敗限流；Session 原始 Token 只存在 Cookie，SQLite 僅保存 SHA-256 hash。
+- 登入失敗限流；Session 原始 Token 只存在 Cookie，SQLite 僅保存 SHA-256 hash。同一帳號同時只允許一個有效 Session，第二次通過帳密驗證後必須由使用者確認，才會撤銷舊 Session 並建立新 Session。
 - 前端登入頁、啟動時登入狀態檢查與登出操作。
 
 部署前尚待完成：
@@ -47,7 +47,7 @@
 - GAI 解析自然語言顏色；信心分數達 `0.91` 才使用 Pillow 執行指定區域換色，否則改走 Image API
 - 9 種內建商品參考圖，以及支援任意自由文字商品的商品預覽
 - 水平三連 repeat 預覽
-- 「我的圖片」與收藏資料夾內採三欄正方形圖庫，圖片之間以細白線分隔，未排滿的位置透出頁面背景
+- 「我的圖片」與收藏資料夾內採雙欄 Masonry 圖庫，依新到舊左右交錯排列；圖騰、商品照、輔助圖容器比例分別為 `3:2`、`1:1`、`4:3`
 - 圖騰詳情畫廊：圖騰原圖、商品展示、輔助圖
 - 「我的圖片／我的收藏」的全螢幕圖片檢視支援雙指縮放、拖曳與左右切換，並在底部顯示圖片到期時間
 - 手機聊天室介面，聊天室與訊息儲存於 SQLite
@@ -87,8 +87,8 @@ FastAPI :8000
 1. 新聊天室在固定於頁面底部的輸入框上方顯示「元素、配色、載體」三個快捷按鈕；三種選擇頁都保留工具列與輸入框可見。點擊快捷按鈕會直接開啟對應選擇頁，不播放吸入動畫；送出第一則訊息時，快捷按鈕才縮入輸入框左側的「＋」並消失。對話開始後可由「＋」開啟相同選項。「風格」與「工藝技術」已移除。
 2. 初次送出時，若有選擇配色 tag 就使用該色票；只有一個顏色時自動加入白色。沒有配色 tag 才隨機選擇預設色票。Image API 一次產生四種不同圖騰，再由 Pillow 將四張成品統一到同一目標色票並記錄實際 RGB。若同時選擇載體 tag，系統會接續使用白色商品、白底與 AI 自動位置生成四張商品圖，等待商品圖全部完成後才在 AI 回覆中顯示結果；未選載體時只顯示圖騰。
 3. 使用者點擊聊天室圖片後進入詳情畫廊，可切換圖騰原圖、商品展示與十字繡輔助圖，並將目前圖片加入一個或多個收藏資料夾。詳情畫廊是聊天室圖片的最終檢視頁，不會再從圖片進入雙指縮放頁。
-4. 未選載體的圖騰不會因為開啟詳情頁而隨機生成商品圖；商品展示頁會顯示「沒有生成商品圖」。使用者可點擊右下角「載體」，從按鈕上方向上展開的文字選單選擇載體，接著以白色商品、白底與 AI 自動位置生成商品預覽。
-5. 聊天室圖片與詳情頁都提供「類似」功能。從詳情頁的商品預覽進入時預設為「更換商品圖」，從圖騰原圖進入時預設為「更換配色」，並以 hero transition 將來源圖片帶回輸入框。若選擇「更換商品圖」，可直接以自然語言描述商品、位置、顏色、材質、背景或構圖；此操作建立獨立 record 並保留舊商品照。
+4. 未選載體的圖騰不會因為開啟詳情頁而隨機生成商品圖；商品展示頁會顯示「沒有生成商品圖」。商品展示頁的「載體」入口會持續顯示，使用者可從向上展開的文字選單選擇尚未使用的載體，接著以內建商品參考圖、白色商品、白底與 AI 自動位置生成商品預覽。同一圖騰的同一載體只能由此入口生成一次；完成後會新增獨立 record 與聊天室 exchange，不覆蓋原訊息。只有初次生成時已選擇載體 tag 的商品圖屬於第一則 AI 回覆，可與該次圖騰共用原始 record。
+5. 聊天室圖片卡片提供「類似」功能，詳情頁不再顯示「類似」。修改完成後的聊天室回覆資產由被點擊的來源卡片決定：來源是圖騰時顯示新圖騰；來源是商品圖時，即使選擇更換元素、配色或原組合重新生成，也會先生成新圖騰，再以來源商品類型的內建參考圖、白色商品、白底與 AI 自動位置生成並顯示新商品照。選擇「更換商品圖」則維持自然語言商品修改流程。
 6. 修改圖騰分為四種模式：
    - `更換元素`：第一層 `gpt-5-mini` 將最新要求解析為結構化 Design Spec，第二層 Prompt Compiler 編譯新 Prompt，再呼叫 Image API。明確排除的元素會保存於 `excluded_elements`；例如「移除菱形」會覆蓋預設菱形偏好。
    - `更換配色`：有文字時由文字 GAI 解析來源/目標 RGB；解析信心達 `0.91` 才由 Pillow 換色，否則改用 Image API。留空時從預設布農色盤隨機換色。
@@ -96,9 +96,9 @@ FastAPI :8000
    - `更換商品圖`：保持圖騰不變，只生成指定的新商品照。文字解析成功時使用結構化商品設定；解析失敗時，直接把目前商品預覽圖、原始圖騰與使用者原文交給 Image Edit，不因缺少商品欄位回傳 `500`。
 7. 一般輸入框在生成後仍可繼續從頭設計；同一聊天室會保留多組 Generation Exchange。每張圖片也可隨時使用「類似」。
 
-前端是最大寬度 480px 的手機版聊天室，會依裝置 viewport 自動適配；窄螢幕不會因固定卡片寬度產生水平溢出，並支援手機安全區域。四張初始提案在聊天訊息內使用 2×2 排列，圖片容器使用 AI 訊息可用寬度的 88%；商品提案以正方形顯示。詳情頁尺寸不受影響。商品圖修改完成後，AI 回覆卡片會直接顯示新的商品預覽圖，點入詳情頁時預設開啟「商品預覽」，但仍保留「圖騰／商品預覽／輔助圖」三個頁籤。
+前端是最大寬度 480px 的手機版聊天室，會依裝置 viewport 自動適配；窄螢幕不會因固定卡片寬度產生水平溢出，並支援手機安全區域。四張初始提案在聊天訊息內使用 2×2 排列，圖片容器使用 AI 訊息可用寬度的 88%；商品提案以正方形顯示。詳情頁尺寸不受影響。商品展示頁會透過 `product-previews` API 重新查詢共用相同 motif `storage_key` 的所有有效商品照，以翻頁方式顯示；每次開啟詳情頁或切換到商品展示都重新查詢，不永久使用第一次載入的快取。
 
-「我的圖片」與收藏資料夾內使用三欄 `1:1` 圖庫，縮圖以 `cover` 等比例填滿並置中裁切。圖片本身提供 `1px` 白色分隔框線，grid 背景保持透明，因此最後一排未滿三張時會顯示頁面背景，而不是整段白色區塊。縮圖不顯示到期文字；點開支援雙指縮放的全螢幕圖片檢視器後，才在底部顯示明確到期日期與時間。
+「我的圖片」與收藏資料夾內使用雙欄 Masonry 圖庫；API 結果依建立時間由新到舊，前端再依序分配為左、右、左、右兩欄。圖騰、商品照、輔助圖縮圖容器比例分別固定為 `3:2`、`1:1`、`4:3`，圖片以 `cover` 等比例填滿並置中裁切。縮圖不顯示到期文字；點開支援雙指縮放的全螢幕圖片檢視器後，才在底部顯示明確到期日期與時間。
 
 一般生成的 `↑` 送出按鈕只有在輸入框包含非空白文字時才顯示；「更換商品圖」等修改模式也使用相同的 `↑` 按鈕。使用者停留在聊天室底部時，送出訊息與 AI 回覆完成後會自動捲到底；若使用者主動往上查看舊訊息則暫停自動捲動，回到距離底部約 80 px 內才恢復。最近對話依最後一次送出／同步訊息的 `updated_at` 排序，單純開啟聊天室不會置頂。
 
@@ -249,6 +249,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 | `DATA_RETENTION_MINUTES` | 新資料保留時間；正式環境 14 天 | `20160` |
 | `SESSION_COOKIE_NAME` | Session Cookie 名稱 | `totem_session` |
 | `SESSION_TTL_MINUTES` | 登入 Session 絕對期限（分鐘） | `480` |
+| `SESSION_REPLACEMENT_CHALLENGE_MINUTES` | 取代舊登入的一次性確認 challenge 有效分鐘數 | `5` |
 | `SESSION_COOKIE_SECURE` | Cookie 是否只允許 HTTPS；正式環境必須為 `true` | `false` |
 | `LOGIN_FAILURE_LIMIT` | 同一來源與帳號在時間窗內最多失敗次數 | `5` |
 | `LOGIN_FAILURE_WINDOW_MINUTES` | 登入失敗計數時間窗 | `15` |
@@ -263,9 +264,12 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 | Method | Endpoint | 用途 |
 |---|---|---|
-| `POST` | `/api/v1/auth/login` | 驗證帳密並建立 HttpOnly Session Cookie |
+| `POST` | `/api/v1/auth/login` | 驗證帳密；沒有其他有效 Session 時建立 HttpOnly Session Cookie，否則回傳一次性取代 challenge |
+| `POST` | `/api/v1/auth/login/replace` | 使用短效一次性 challenge 撤銷舊 Session 並建立新 Session |
 | `GET` | `/api/v1/auth/me` | 取得目前登入帳號；未登入回傳 `401` |
 | `POST` | `/api/v1/auth/logout` | 撤銷伺服器 Session 並清除 Cookie |
+
+登入衝突只會在帳密驗證成功後回傳，避免洩漏帳號是否在線。前端會詢問是否登出先前裝置；取消不會改變舊 Session，確認後舊 Session 在下一次 API request 立即收到 `401`。取代 challenge 存放於單一 backend worker 記憶體，預設 5 分鐘到期且只能使用一次；服務重啟後既有 challenge 自動失效。撤銷所有有效舊 Session 與建立新 Session 會在同一資料庫 transaction 完成，並由單 worker 登入鎖避免同時登入競態。
 
 | Method | Endpoint | 用途 |
 |---|---|---|
@@ -274,10 +278,12 @@ Set-ExecutionPolicy -Scope Process Bypass
 | `GET` | `/api/v1/images/assets` | 取得全部圖片資產，可用 `saved`／`favorite` 篩選 |
 | `PATCH` | `/api/v1/images/{id}/assets/{type}` | 更新 motif／preview／chart 的狀態 |
 | `GET/POST` | `/api/v1/images/collections` | 取得或新增收藏資料夾 |
+| `PATCH` | `/api/v1/images/collections/{collection_id}` | 重新命名自訂收藏資料夾；系統資料夾不可修改 |
 | `DELETE` | `/api/v1/images/collections/{collection_id}` | 刪除自訂收藏資料夾及其收藏關聯；不刪除圖片 |
 | `GET` | `/api/v1/images/collections/{collection_id}/assets` | 取得資料夾內圖片 |
 | `PATCH` | `/api/v1/images/{id}/assets/{type}/collections` | 設定圖片所屬收藏資料夾 |
-| `POST` | `/api/v1/images/{id}/preview` | 為指定圖騰生成或更新商品預覽 |
+| `POST` | `/api/v1/images/{id}/preview` | 以選定載體為指定圖騰生成商品預覽；帶完整聊天室 exchange headers 時一律建立衍生 record，否則只在已有 preview 時建立衍生 record；拒絕同圖騰重複載體 |
+| `GET` | `/api/v1/images/{id}/product-previews` | 取得使用相同 motif `storage_key` 的所有有效商品照 records |
 | `POST` | `/api/v1/images/{id}/preview/random` | 隨機選擇合法設定並生成商品預覽 |
 | `POST` | `/api/v1/images/{id}/preview/variant` | 保留圖騰並建立指定商品照的新 record |
 | `POST` | `/api/v1/images/{id}/regenerate` | 更換元素、程式換色或依完整 record 重新生成 |
@@ -314,7 +320,7 @@ Invoke-RestMethod `
 
 所有會呼叫 GAI 的 `POST` endpoint 都必須帶 16–100 字元的 `Idempotency-Key`。同一個動作因網路問題重試時必須沿用原 key；使用新 key 代表建立新的生成工作。工作狀態可由 `GET /api/v1/generation-jobs/{job_id}` 查詢。
 
-聊天室內的生成請求另外傳送 `X-Chatroom-Id` 與 `X-Client-Exchange-Id`。後端會把這兩個值存入 generation job，完成或失敗後直接更新對應 assistant message 並連結結果圖片；即使使用者切換聊天室、重新整理或關閉頁面，也不依賴原頁面繼續存在。若 pending 訊息比 job 結果晚寫入，聊天室同步時會再次 reconciliation，避免訊息永久停在生成中。
+聊天室內的生成請求另外傳送 `X-Chatroom-Id` 與 `X-Client-Exchange-Id`。後端會把這兩個值存入 generation job，完成或失敗後直接更新對應 assistant message 並連結結果圖片；即使使用者切換聊天室、重新整理或關閉頁面，也不依賴原頁面繼續存在。若 pending 訊息比 job 結果晚寫入，聊天室同步時會再次 reconciliation，避免訊息永久停在生成中。兩個 headers 同時存在也代表這次結果必須成為獨立 AI 訊息；商品預覽即使是該圖騰的第一張，也必須建立新的衍生 `ImageRecord`，不可把原圖騰 record 的 `message_id` 改綁至商品訊息。
 
 `palette` 與 `count` 不屬於前端初始生成請求。前端可在 `colors` 傳入配色 tags；有顏色時四張提案共用該目標色票，只有一色時後端自動加入白色；沒有顏色才隨機選擇一組預設色票。Image API 以 `n=4` 產生四種圖騰構圖，Pillow 再將每張成品統一到目標色票。每張圖騰是獨立且完整的 record，並保存從成品重新擷取的實際 RGB 色票。
 
@@ -456,9 +462,13 @@ Pop-Location
 
 `design_spec` 目前主要出現在更換元素產生的新 record。它由 Mini Revision Resolver 產生並經 Pydantic 驗證，只包含設計狀態；ID、檔案、URL、收藏與 assets 一律由 Python 管理。`excluded_elements` 是持續性的明確排除，優先級高於預設 Prompt 偏好。
 
-商品圖只保存於 `assets.preview`，不再重複保存 `preview`、`preview_filename`、`preview_url` 或 `preview_request`。商品 variant 目前採「一個 record 對應一張商品照」：更換商品圖會建立新 record、沿用相同圖騰並保存新的 preview asset，避免覆蓋舊聊天室結果。
+商品圖只保存於 `assets.preview`，不再重複保存 `preview`、`preview_filename`、`preview_url` 或 `preview_request`。商品照採「一個 record 對應一張商品照」：`preview/variant`、對已有 preview 的一般 `preview`，以及任何帶有完整聊天室 exchange headers、需要成為獨立 AI 回覆的 `preview`，都會建立新 record、沿用相同圖騰並保存新的 preview asset，避免覆蓋舊聊天室結果。初次生成時選擇載體 tag 是例外：商品圖本來就屬於第一則生成回覆，因此可直接放在該次新建的圖騰 record。詳情頁載體入口會檢查同圖騰所有有效 preview 的 `parameters.product`，前端停用已使用載體，後端也以 `409` 阻擋重複請求。
+
+目前 `ImageRecord.message_id` 是單值關聯，一筆圖片版本只能直接屬於一則 assistant message。因此，後續獨立商品回覆不可沿用原圖騰的 record 再修改 `message_id`；否則原生成訊息重新載入時會少一張圖，並被誤判為圖片已到期。獨立商品 record 以 `parent_image_id` 記錄來源，並透過相同 motif `storage_key` 加入 image-detail-page 的商品照集合。
 
 同一個 `ImageRecord` 代表一個完整圖片版本，最多各有一筆 `motif`、`preview`、`chart` 與 `original` asset。版本內所有 active assets 共用 `ImageRecord.expires_at`：成功產生新商品圖或輔助圖時，整個版本的期限更新為當下加上 `DATA_RETENTION_MINUTES`；單純讀取、收藏或變更 saved 狀態不延長期限。商品圖修改建立的衍生 record 使用獨立期限，並以 `parent_image_id` 記錄來源。衍生版本可引用相同圖騰 `storage_key`；刪除舊版本時只要仍有有效引用，就不移除共用實體檔案。
+
+`GET /api/v1/images/{id}/product-previews` 先取得來源 record 的 active motif `storage_key`，再查詢同一使用者、尚未刪除且未到期、引用完全相同 motif 檔案並含 active preview 的 records，依建立時間由舊到新回傳。這是目前商品照翻頁的群組依據；它代表使用相同實體圖騰檔案，不以 `parent_image_id` 的單層關係判斷。
 
 `GET /api/v1/images/assets` 會以 `asset_type + URL` 去除共用資產的重複項目，並優先保留最早建立的原始 record。因此連續「更換商品圖」時，每張新商品預覽仍會顯示，但沿用同一實體檔案的圖騰或輔助圖只在「我的圖片」顯示一次。資料庫中的衍生 record、parent 關係與共用 storage key 引用不受影響。
 
@@ -516,7 +526,7 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 - 正式環境務必更換 `SECRET_KEY`。
 - 生成 endpoint 已有登入、ownership、quota、單帳號 active job 鎖與冪等保護；敏感 Log、一般化 `500`、production bundle 與 repository 機密掃描已完成，正式 EC2 上線後仍須驗收實際 journal／Nginx log。
 
-## 商品預覽與近期行為說明（2026-07-23）
+## 商品預覽與近期行為說明（更新至 2026-08-03）
 
 ### 固定商品參考圖與雙圖生成
 
@@ -596,6 +606,8 @@ backend/app/services/product_preview.py
 
 商品圖修改產生的新 record 會在聊天室 revision exchange 保存 `displayAsset=preview`。因此 AI 回覆卡片直接顯示商品圖；舊聊天室若缺少此欄位，前端會以「更換商品圖」訊息文字相容判斷。
 
+若使用者從聊天室商品圖卡片進入「類似」，但選擇更換元素、更換配色或原組合重新生成，前端會在 regenerate request 傳送 `preview_mode=template`。後端先完成新圖騰，再沿用來源 preview 的商品類型，固定以該商品的內建參考圖、`AI自動決定位置` 與 `白色商品＋白底` 生成新 preview；此流程不使用舊商品照作 reference。從圖騰卡片進入相同三種修改時則維持既有 `preview_mode=current` 行為，聊天室回覆顯示 motif。
+
 ### 聊天室排序與滑動到期時間
 
 聊天室依 `updated_at` 由新到舊排列；`updated_at` 代表最後一次訊息或聊天室內容更新，而不是最後查看時間。只是開啟單一聊天室或取得聊天室列表，都不會把它移到第一個，也不會延長保存期限。已到期聊天室即使 cleanup 尚未執行，也不會出現在最近對話。
@@ -612,6 +624,7 @@ backend/app/services/product_preview.py
 - 收藏頁右上角的編輯按鈕可進入資料夾編輯模式；自訂資料夾左上角會顯示「−」刪除按鈕。
 - 刪除自訂資料夾前會顯示站內確認對話框；只刪除資料夾及其收藏關聯，圖片仍保留。
 - 系統資料夾「我的最愛」不顯示刪除按鈕，也不能透過 API 刪除。
+- 進入自訂資料夾後，可點擊 App Bar 名稱進行行內重新命名；手機鍵盤「完成／Enter」或桌面 Enter 才送出 `PATCH` 儲存，失去焦點、返回或 Escape 皆取消。系統資料夾「我的最愛」不可重新命名。
 
 ### 驗證
 

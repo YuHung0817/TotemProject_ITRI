@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session
@@ -73,5 +75,85 @@ def test_password_hash_and_server_session_cookie() -> None:
                     "message": "請先登入後再繼續操作。",
                 }
             }
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_active_session_requires_explicit_one_time_replacement() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    @event.listens_for(engine, "connect")
+    def enable_foreign_keys(dbapi_connection, connection_record) -> None:  # type: ignore[no-untyped-def]
+        dbapi_connection.execute("PRAGMA foreign_keys=ON")
+
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        user = User(
+            id="single-store",
+            username="store",
+            password_hash=hash_password("a-secure-test-password"),
+        )
+        db.add_all(
+            [
+                user,
+                UserSession(
+                    id="expired-session",
+                    user=user,
+                    created_at=datetime.now(timezone.utc) - timedelta(hours=2),
+                    expires_at=datetime.now(timezone.utc) - timedelta(hours=1),
+                ),
+            ]
+        )
+        db.commit()
+
+    def override_db():
+        with Session(engine) as db:
+            yield db
+
+    app.dependency_overrides[get_db] = override_db
+    try:
+        with TestClient(app) as first, TestClient(app) as second:
+            credentials = {
+                "username": "store",
+                "password": "a-secure-test-password",
+            }
+            assert first.post("/api/v1/auth/login", json=credentials).status_code == 200
+
+            wrong = second.post(
+                "/api/v1/auth/login",
+                json={"username": "store", "password": "wrong-password"},
+            )
+            assert wrong.status_code == 401
+            assert wrong.json()["detail"]["code"] == "invalid_credentials"
+
+            conflict = second.post("/api/v1/auth/login", json=credentials)
+            assert conflict.status_code == 409
+            detail = conflict.json()["detail"]
+            assert detail["code"] == "session_already_active"
+            assert detail["challenge"]
+
+            # Merely receiving or cancelling the prompt does not affect the old login.
+            assert first.get("/api/v1/auth/me").status_code == 200
+            assert second.get("/api/v1/auth/me").status_code == 401
+
+            replaced = second.post(
+                "/api/v1/auth/login/replace",
+                json={"challenge": detail["challenge"]},
+            )
+            assert replaced.status_code == 200
+            assert second.get("/api/v1/auth/me").status_code == 200
+            assert first.get("/api/v1/auth/me").status_code == 401
+
+            replay = first.post(
+                "/api/v1/auth/login/replace",
+                json={"challenge": detail["challenge"]},
+            )
+            assert replay.status_code == 409
+            assert replay.json()["detail"]["code"] == "invalid_replacement_challenge"
+            assert second.get("/api/v1/auth/me").status_code == 200
     finally:
         app.dependency_overrides.clear()

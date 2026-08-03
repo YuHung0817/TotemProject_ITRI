@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     data_retention_minutes: int = 14 * 24 * 60
     session_cookie_name: str = "totem_session"
     session_ttl_minutes: int = 8 * 60
+    session_replacement_challenge_minutes: int = 5
     session_cookie_secure: bool = False
     login_failure_limit: int = 5
     login_failure_window_minutes: int = 15

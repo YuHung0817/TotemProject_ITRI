@@ -154,9 +154,9 @@ function ExpiryLabel({expiresAt}:{expiresAt?:string}) {
   return <small className="expiry-label">預計於 {formatExpiry(expiresAt)} 到期</small>;
 }
 
-function ExpiredImagePlaceholder() {
+function ExpiredImagePlaceholder({ showingPreview=false, squareCard=false }: { showingPreview?:boolean; squareCard?:boolean }) {
   return <article className="card image-card expired-image-card">
-    <div className="image-stage expired-image-placeholder" role="img" aria-label="儲存期限已過，無法讀取照片">
+    <div className={`image-stage expired-image-placeholder ${showingPreview ? "showing-preview" : ""} ${squareCard ? "square-card" : ""}`} role="img" aria-label="儲存期限已過，無法讀取照片">
       <span aria-hidden="true">!</span>
       <p>儲存期限已過，<br/>故無法讀取照片。</p>
     </div>
@@ -249,7 +249,7 @@ const MenuIcon = () => <svg className="menu-icon" viewBox="0 0 24 24" aria-hidde
 const BackIcon = () => <svg className="back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>;
 const BookmarkIcon = ({filled=false}:{filled?:boolean}) => <svg className="bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path className={filled?"filled":""} d="M6.5 3.5h11v17l-5.5-3.6-5.5 3.6z"/></svg>;
 const NewChatIcon = () => <svg className="new-chat-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l4 4v4.2M14 3.5v4h4M12.5 19.5H5V3.5"/><path d="m11.5 18.5 6.7-6.7 2 2-6.7 6.7-2.7.7z"/></svg>;
-const EditCollectionsIcon = () => <svg className="edit-collections-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m4 20 4.2-.9L19 8.3a2.3 2.3 0 0 0 0-3.2l-.1-.1a2.3 2.3 0 0 0-3.2 0L4.9 15.8 4 20Z"/><path d="m14.5 6.2 3.3 3.3"/></svg>;
+const EditCollectionsIcon = () => <svg className="edit-collections-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 13h10l1-13"/><path d="M10 11v5M14 11v5"/></svg>;
 const LogoutIcon = () => <svg className="logout-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 8V5.5A2.5 2.5 0 0 0 11.5 3h-6A2.5 2.5 0 0 0 3 5.5v13A2.5 2.5 0 0 0 5.5 21h6a2.5 2.5 0 0 0 2.5-2.5V16"/><path d="M9 12h12m-4-4 4 4-4 4"/></svg>;
 const ElementsIcon = () => <svg className="elements-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 4 6.5H8z"/><rect x="3.5" y="13" width="7" height="7" rx="1"/><circle cx="17" cy="16.5" r="3.5"/></svg>;
 const MoonTagIcon = () => <svg className="moon-tag-icon" viewBox="0 0 21 20" fill="none" aria-hidden="true"><path d="M19.3695 12.6835C18.2431 12.852 17.0941 12.7474 16.0139 12.3783C14.9337 12.0091 13.9522 11.3854 13.1474 10.5569C12.3426 9.72846 11.7367 8.71803 11.3781 7.60607C11.0195 6.49411 10.9179 5.31133 11.0816 4.15186C9.2548 4.42802 7.59711 5.40521 6.44119 6.88731C5.28528 8.3694 4.71668 10.2467 4.84954 12.1424C4.98239 14.0382 5.80685 15.812 7.15746 17.108C8.50806 18.4039 10.2848 19.1261 12.1312 19.1295C13.8886 19.1296 15.5873 18.4782 16.9163 17.2944C18.2454 16.1107 19.1169 14.4739 19.3695 12.6835Z" stroke="white" strokeWidth="1.2"/><path d="M1.44385 6.68008V8.41722M2.2876 7.54865H0.600098M4.81886 0.600098V2.91628M5.94386 1.75819H3.69386" stroke="white" strokeWidth="1.2" strokeLinecap="round"/></svg>;
@@ -362,10 +362,13 @@ function CollectionPickerPanel({open,collections,selectedIds,search,onSearch,onT
 function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarrierPreview, generationBlocked, onPreviewGenerationChange, initialAsset, squareCard=false }: { image: ImageRecord; updateImage: (oldId:string, value:ImageRecord) => void; setStatus: (value: string) => void; askRegenerate:(image:ImageRecord,sourceAsset?:"motif"|"preview",heroTransition?:boolean,initialMode?:RevisionMode|null)=>void; generateCarrierPreview:(product:string)=>Promise<void>; generationBlocked:boolean; onPreviewGenerationChange:(active:boolean)=>void; initialAsset?: "motif"|"preview"; squareCard?:boolean }) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [heroTransitioning,setHeroTransitioning]=useState(false);
-  const [similarHeroTransitioning,setSimilarHeroTransitioning]=useState(false);
   const [detailSwapDirection,setDetailSwapDirection]=useState<"next"|"previous">("next");
   const [imageUnavailable, setImageUnavailable] = useState(false);
   const [detailView, setDetailView] = useState<AssetType>("motif");
+  const [previewRecords,setPreviewRecords]=useState<ImageRecord[]>(image.assets?.preview?.url?[image]:[]);
+  const [previewIndex,setPreviewIndex]=useState(0);
+  const [previewsLoading,setPreviewsLoading]=useState(false);
+  const [pendingCarrier,setPendingCarrier]=useState<string|null>(null);
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [carrierMenuOpen,setCarrierMenuOpen]=useState(false);
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
@@ -375,6 +378,7 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
   const previewUrl = previewAsset?.url;
   const previewRequest = previewAsset?.parameters;
   const previewRequestStarted = useRef(Boolean(previewUrl));
+  const previewsLoadingRef = useRef(false);
   const heroTransitionRef=useRef<ViewTransition|null>(null);
   const detailSwapTransitionRef=useRef<ViewTransition|null>(null);
   const motifUrl = image.totem_url ?? image.url;
@@ -382,7 +386,37 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
   const cardAsset = preferredAsset === "preview" && previewUrl ? "preview" : "motif";
   const cardUrl = cardAsset === "preview" ? previewUrl : motifUrl;
   const chartUrl = `${API}/images/${image.id}/cross-stitch-chart?width=100&height=50&colors=5`;
-  const activeAsset = image.assets?.[detailView];
+  const showingPendingPreview=pendingCarrier!==null&&previewIndex===previewRecords.length;
+  const selectedPreviewRecord=showingPendingPreview?undefined:previewRecords[previewIndex]??(previewUrl?image:undefined);
+  const displayedPreviewUrl=showingPendingPreview?undefined:selectedPreviewRecord?.assets?.preview?.url;
+  const previewPageCount=previewRecords.length+(pendingCarrier?1:0);
+  const usedCarrierProducts=new Set(
+    previewRecords
+      .map(record=>record.assets?.preview?.parameters?.product)
+      .filter((product):product is string=>Boolean(product)),
+  );
+  const detailRecord=detailView==="preview"&&selectedPreviewRecord?selectedPreviewRecord:image;
+  const activeAsset = detailRecord.assets?.[detailView];
+
+  async function loadProductPreviews(selectNewest=false) {
+    if (previewsLoadingRef.current) return;
+    previewsLoadingRef.current=true;
+    setPreviewsLoading(true);
+    try {
+      const response=await fetch(`${API}/images/${image.id}/product-previews`);
+      const data=await readResponse(response);
+      if (!response.ok) throw userFacingError(data,"無法載入商品照");
+      const records=Array.isArray(data)?data as ImageRecord[]:[];
+      setPreviewRecords(records);
+      const currentIndex=records.findIndex(record=>record.id===image.id);
+      setPreviewIndex(selectNewest?Math.max(0,records.length-1):currentIndex>=0?currentIndex:Math.max(0,records.length-1));
+    } catch (error) {
+      setStatus(userFacingMessage(error,"無法載入商品照"));
+    } finally {
+      previewsLoadingRef.current=false;
+      setPreviewsLoading(false);
+    }
+  }
 
   function requestPreviewIfNeeded() {
     if (!image.request?.carrier || previewUrl || previewRequestStarted.current || generationBlocked) return;
@@ -401,14 +435,11 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
     })();
   }
 
-  function finishHeroTransition(transition:ViewTransition,revisionHero=false) {
+  function finishHeroTransition(transition:ViewTransition) {
     void transition.finished.finally(() => {
       if (heroTransitionRef.current !== transition) return;
       heroTransitionRef.current=null;
       setHeroTransitioning(false);
-      if (revisionHero) {
-        setSimilarHeroTransitioning(false);
-      }
       delete document.documentElement.dataset.imageHeroTransition;
     });
   }
@@ -420,6 +451,7 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
       setDetailView(cardAsset);
       setDetailOpen(true);
       requestPreviewIfNeeded();
+      void loadProductPreviews();
       return;
     }
 
@@ -433,6 +465,7 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
     heroTransitionRef.current=transition;
     finishHeroTransition(transition);
     requestPreviewIfNeeded();
+    void loadProductPreviews();
   }
 
   function closeDetail() {
@@ -450,30 +483,6 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
     const transition=startViewTransition(() => flushSync(() => setDetailOpen(false)));
     heroTransitionRef.current=transition;
     finishHeroTransition(transition);
-  }
-
-  function startSimilarFromDetail() {
-    if (detailView==="chart" || generationBlocked) return;
-    const sourceAsset=detailView==="preview"?"preview":"motif";
-    const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const startViewTransition=document.startViewTransition?.bind(document);
-    if (reducedMotion || !startViewTransition) {
-      askRegenerate(image,sourceAsset,false,sourceAsset==="preview"?"product":"palette");
-      setDetailOpen(false);
-      return;
-    }
-    heroTransitionRef.current?.skipTransition();
-    flushSync(()=>{
-      setSimilarHeroTransitioning(true);
-      setHeroTransitioning(true);
-    });
-    document.documentElement.dataset.imageHeroTransition="close";
-    const transition=startViewTransition(()=>flushSync(()=>{
-      askRegenerate(image,sourceAsset,true,sourceAsset==="preview"?"product":"palette");
-      setDetailOpen(false);
-    }));
-    heroTransitionRef.current=transition;
-    finishHeroTransition(transition,true);
   }
 
   function changeDetailView(view:AssetType) {
@@ -516,7 +525,30 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
 
   function selectDetailView(view:AssetType) {
     if (view === "chart") void openChart();
-    else changeDetailView(view);
+    else {
+      if(view==="preview") void loadProductPreviews();
+      changeDetailView(view);
+    }
+  }
+
+  function turnPreviewPage(direction:"next"|"previous") {
+    const next=previewIndex+(direction==="next"?1:-1);
+    if(next<0||next>=previewPageCount)return;
+    setDetailSwapDirection(direction);
+    setPreviewIndex(next);
+  }
+
+  async function generateNextCarrierPreview(product:string) {
+    setCarrierMenuOpen(false);
+    setPendingCarrier(product);
+    setDetailSwapDirection("next");
+    setPreviewIndex(previewRecords.length);
+    try {
+      await generateCarrierPreview(product);
+      await loadProductPreviews(true);
+    } finally {
+      setPendingCarrier(null);
+    }
   }
 
   async function openCollectionPicker() {
@@ -527,12 +559,15 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
   }
 
   async function setAssetCollections(collectionIds:string[]) {
-    const response = await fetch(`${API}/images/${image.id}/assets/${detailView}/collections`, {
+    const response = await fetch(`${API}/images/${detailRecord.id}/assets/${detailView}/collections`, {
       method:"PATCH", headers:{"Content-Type":"application/json"},
       body:JSON.stringify({collection_ids:collectionIds}),
     });
     const data = await readResponse(response);
-    if (response.ok) updateImage(image.id, data);
+    if (response.ok) {
+      if(detailRecord.id===image.id)updateImage(image.id, data);
+      setPreviewRecords(current=>current.map(record=>record.id===detailRecord.id?data:record));
+    }
   }
 
   async function createAndSelectCollection() {
@@ -548,30 +583,31 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
     await setAssetCollections([...(activeAsset?.collection_ids ?? []), created.id]);
   }
 
-  if (imageUnavailable) return <ExpiredImagePlaceholder/>;
+  if (imageUnavailable) return <ExpiredImagePlaceholder showingPreview={cardAsset === "preview"} squareCard={squareCard}/>;
 
   return <article
     className={`card image-card ${squareCard ? "square-image-card" : ""}`}
     data-chat-image-urls={[image.url,image.totem_url,...Object.values(image.assets ?? {}).map(asset=>asset?.url)].filter(Boolean).join("\n")}
   >
     <button type="button" className={`image-stage image-open-button ${cardAsset === "preview" ? "showing-preview" : ""} ${squareCard ? "square-card" : ""}`} onClick={openDetail}>
-      <img src={`${SERVER}${cardUrl}`} alt={`${assetLabels[cardAsset]} ${image.id}`} style={heroTransitioning && !detailOpen && !similarHeroTransitioning ? {viewTransitionName:"active-image-hero"} : undefined} onError={()=>setImageUnavailable(true)}/>
+      <img src={`${SERVER}${cardUrl}`} alt={`${assetLabels[cardAsset]} ${image.id}`} style={heroTransitioning && !detailOpen ? {viewTransitionName:"active-image-hero"} : undefined} onError={()=>setImageUnavailable(true)}/>
     </button>
     <button type="button" className="chat-image-regenerate" disabled={generationBlocked} onClick={() => askRegenerate(image,cardAsset)} aria-label="產生類似圖騰"><SimilarIcon/><span>類似</span></button>
     {detailOpen && createPortal(<div className="image-detail-page" role="dialog" aria-modal="true" aria-label="圖騰圖片詳情">
       <header className="image-detail-header"><button type="button" className="close-image-button" onClick={closeDetail} aria-label="關閉圖騰詳情頁"><CloseButtonIcon /></button><strong>{assetLabels[detailView]}</strong><div className="image-detail-actions"><button type="button" disabled={!activeAsset} className={(activeAsset?.collection_ids?.length ?? 0)>0?"active":""} onClick={openCollectionPicker} aria-label="收藏目前圖片"><BookmarkIcon filled={(activeAsset?.collection_ids?.length ?? 0)>0}/></button></div></header>
       <div className={`image-detail-content ${detailView}`}>
-        <div className="image-detail-media">{detailView === "chart"
+        <div className={`image-detail-media ${detailView==="preview"&&previewPageCount>1?"preview-book":""}`}>{detailView === "chart"
             ? <img key="chart" className={`detail-swap-image ${detailSwapDirection}`} src={`${chartUrl}&t=${Date.now()}`} alt="十字繡輔助圖" style={{viewTransitionName:"active-detail-swap"}}/>
-            : detailView === "preview" && !previewUrl
-              ? <div className="empty-preview">{image.request?.carrier||generationBlocked?<><span>商品預覽生成中…</span><small>完成後即可直接查看</small></>:<span>沒有生成商品圖</span>}</div>
-              : <img key={detailView} className={`detail-swap-image ${detailSwapDirection}`} src={`${SERVER}${detailView === "preview" ? previewUrl : motifUrl}`} alt={assetLabels[detailView]} style={{viewTransitionName:heroTransitioning?"active-image-hero":"active-detail-swap"}}/>
+            : detailView === "preview" && !displayedPreviewUrl
+              ? <div className="empty-preview">{showingPendingPreview?<><span>正在生成</span><small>{pendingCarrier}商品照完成後會顯示在這一頁</small></>:previewsLoading?<span>載入商品照中…</span>:image.request?.carrier||generationBlocked?<><span>商品預覽生成中…</span><small>完成後即可直接查看</small></>:<span>沒有生成商品圖</span>}</div>
+              : <img key={detailView==="preview"?selectedPreviewRecord?.id:detailView} className={`detail-swap-image ${detailSwapDirection}`} src={`${SERVER}${detailView === "preview" ? displayedPreviewUrl : motifUrl}`} alt={assetLabels[detailView]} style={{viewTransitionName:heroTransitioning?"active-image-hero":"active-detail-swap"}}/>
           }</div>
-        <div className="image-detail-meta"><ExpiryLabel expiresAt={image.expires_at}/>{detailView==="preview"&&!previewUrl&&!image.request?.carrier?<div className="detail-carrier-picker">{carrierMenuOpen&&<div className="detail-carrier-menu" role="menu" aria-label="選擇商品載體">{products.map(product=><button type="button" role="menuitem" onClick={()=>{setCarrierMenuOpen(false);void generateCarrierPreview(product);}} key={product}>{product}</button>)}</div>}<button type="button" className="detail-similar-button" disabled={generationBlocked} onClick={()=>setCarrierMenuOpen(value=>!value)} aria-label="選擇商品載體" aria-expanded={carrierMenuOpen}><CarrierIcon/><span>載體</span></button></div>:detailView!=="chart"&&<button type="button" className="detail-similar-button" disabled={generationBlocked} onClick={startSimilarFromDetail} aria-label={`以目前${assetLabels[detailView]}產生類似設計`}><SimilarIcon/><span>類似</span></button>}</div>
+        {detailView==="preview"&&previewPageCount>1&&<div className="preview-book-controls"><button type="button" disabled={previewIndex===0} onClick={()=>turnPreviewPage("previous")} aria-label="上一張商品照">‹</button><span>{previewIndex+1} / {previewPageCount}</span><button type="button" disabled={previewIndex===previewPageCount-1} onClick={()=>turnPreviewPage("next")} aria-label="下一張商品照">›</button></div>}
+        <div className="image-detail-meta"><ExpiryLabel expiresAt={detailRecord.expires_at}/>{detailView==="preview"?<div className="detail-carrier-picker">{carrierMenuOpen&&<div className="detail-carrier-menu" role="menu" aria-label="選擇商品載體">{products.map(product=>{const used=usedCarrierProducts.has(product);return <button type="button" role="menuitem" disabled={used||generationBlocked} onClick={()=>void generateNextCarrierPreview(product)} aria-label={used?`${product}，已生成`:product} key={product}>{product}{used?<small>已生成</small>:null}</button>;})}</div>}<button type="button" className="detail-similar-button" disabled={generationBlocked} onClick={()=>setCarrierMenuOpen(value=>!value)} aria-label="選擇商品載體" aria-expanded={carrierMenuOpen}><CarrierIcon/><span>載體</span></button></div>:null}</div>
       </div>
       <nav className="image-detail-gallery" style={{"--active-detail-index":detailViews.indexOf(detailView)} as CSSProperties}>
         <button type="button" className={detailView==="motif"?"active":""} onClick={()=>selectDetailView("motif")}><img src={`${SERVER}${motifUrl}`} alt=""/><span>圖騰原圖</span></button>
-        <button type="button" className={detailView==="preview"?"active":""} onClick={()=>selectDetailView("preview")}>{previewUrl?<img src={`${SERVER}${previewUrl}`} alt=""/>:<i>{image.request?.carrier||generationBlocked?"生成中":"未生成"}</i>}<span>商品展示</span></button>
+        <button type="button" className={detailView==="preview"?"active":""} onClick={()=>selectDetailView("preview")}>{displayedPreviewUrl?<img src={`${SERVER}${displayedPreviewUrl}`} alt=""/>:<i>{image.request?.carrier||generationBlocked?"生成中":"未生成"}</i>}<span>商品展示</span></button>
         <button type="button" className={detailView==="chart"?"active":""} onClick={()=>selectDetailView("chart")}><img src={chartUrl} alt=""/><span>輔助圖</span></button>
       </nav>
       <CollectionPickerPanel open={collectionOpen} collections={collections} selectedIds={activeAsset?.collection_ids??[]} search={collectionSearch} onSearch={setCollectionSearch} onToggle={setAssetCollections} onClose={()=>setCollectionOpen(false)} newName={newCollectionName} onNewName={setNewCollectionName} onCreate={createAndSelectCollection}/>
@@ -580,6 +616,7 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
 }
 
 const assetLabels: Record<AssetType, string> = { motif: "圖騰", preview: "商品照", chart: "輔助圖" };
+const assetAspectRatios:Record<AssetType,string>={motif:"3 / 2",preview:"1 / 1",chart:"4 / 3"};
 
 function GalleryAssetCard({ asset, onChanged }: {
   asset: GalleryAsset;
@@ -724,8 +761,8 @@ function GalleryAssetCard({ asset, onChanged }: {
     setNewCollectionName("");
     await setAssetCollections([...selectedCollectionIds,created.id]);
   }
-  return <article className="favorite-card">
-    <div className="favorite-image" style={asset.width && asset.height ? {aspectRatio:`${asset.width} / ${asset.height}`} : undefined} onClick={openViewer}>
+  return <article className={`favorite-card ${asset.asset_type}`}>
+    <div className="favorite-image" style={{aspectRatio:assetAspectRatios[asset.asset_type]}} onClick={openViewer}>
       <img src={`${SERVER}${asset.url}`} width={asset.width} height={asset.height} alt={assetLabels[asset.asset_type]} style={viewerHeroTransitioning && !viewerOpen ? {viewTransitionName:"active-zoom-hero"} : undefined}/>
     </div>
     {viewerOpen && createPortal(<div className="asset-viewer" role="dialog" aria-modal="true" aria-label="全螢幕圖片" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onWheel={event => {event.preventDefault();setScale(scaleRef.current*(event.deltaY<0?1.15:.87));}}>
@@ -735,6 +772,17 @@ function GalleryAssetCard({ asset, onChanged }: {
     </div>,document.body)}
     <CollectionPickerPanel open={collectionOpen} collections={collections} selectedIds={selectedCollectionIds} search={collectionSearch} onSearch={setCollectionSearch} onToggle={setAssetCollections} onClose={()=>setCollectionOpen(false)} newName={newCollectionName} onNewName={setNewCollectionName} onCreate={createAndSelectCollection}/>
   </article>;
+}
+
+function MasonryAssetGrid({assets,onChanged}:{
+  assets:GalleryAsset[];
+  onChanged:(recordId:string,assetType:AssetType,changes:Partial<Pick<GalleryAsset,"saved"|"favorite"|"collection_ids">>)=>void;
+}) {
+  return <div className="favorites-grid">
+    {[0,1].map(column=><div className="favorites-column" key={column}>
+      {assets.filter((_,index)=>index%2===column).map(asset=><GalleryAssetCard asset={asset} onChanged={onChanged} key={`${asset.record_id}-${asset.asset_type}`}/>)}
+    </div>)}
+  </div>;
 }
 
 export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>}) {
@@ -779,7 +827,16 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   const [deletingCollectionId,setDeletingCollectionId]=useState<string|null>(null);
   const [collectionPendingDelete,setCollectionPendingDelete]=useState<CollectionRecord|null>(null);
   const [activeCollection, setActiveCollection] = useState<CollectionRecord | null>(null);
+  const [collectionRenaming,setCollectionRenaming]=useState(false);
+  const [collectionRenameValue,setCollectionRenameValue]=useState("");
+  const [collectionRenameError,setCollectionRenameError]=useState("");
+  const [collectionRenameSaving,setCollectionRenameSaving]=useState(false);
+  const collectionRenameInputRef=useRef<HTMLInputElement>(null);
+  const collectionRenameSubmittingRef=useRef(false);
   const [folderName, setFolderName] = useState("");
+  const [folderNameInvalid,setFolderNameInvalid]=useState(false);
+  const folderNameInputRef=useRef<HTMLInputElement>(null);
+  const folderNameInvalidTimer=useRef<number|null>(null);
   const promptInput = useRef<HTMLInputElement>(null);
   const composerRef = useRef<HTMLFormElement>(null);
   const addToolButtonRef = useRef<HTMLButtonElement>(null);
@@ -854,7 +911,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
       observer.disconnect();
       root.style.removeProperty("--intro-composer-height");
     };
-  },[chatLoading]);
+  },[chatLoading,page]);
 
   function queueChatSave(chat:StoredChat) {
     chatSaveQueue.current = chatSaveQueue.current
@@ -1149,6 +1206,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   }
 
   async function openFavorites() {
+    setCollectionRenaming(false);
     setActiveCollection(null); setTopbarScrolled(false); changePage("favorites"); setSidebarOpen(false);
     const response = await fetch(`${API}/images/collections`);
     const data = await readResponse(response);
@@ -1167,14 +1225,83 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
   }
 
   async function openCollection(collection:CollectionRecord) {
+    setCollectionRenaming(false);
     const response = await fetch(`${API}/images/collections/${collection.id}/assets`);
     const data = await readResponse(response);
     setFavoriteImages(response.ok ? data : []); setTopbarScrolled(false); setActiveCollection(collection);
   }
 
+  function beginCollectionRename() {
+    if(!activeCollection||activeCollection.system)return;
+    setCollectionRenameValue(activeCollection.name);
+    setCollectionRenameError("");
+    setCollectionRenaming(true);
+    window.requestAnimationFrame(()=>{
+      collectionRenameInputRef.current?.focus();
+      collectionRenameInputRef.current?.select();
+    });
+  }
+
+  function cancelCollectionRename() {
+    if(collectionRenameSaving)return;
+    setCollectionRenaming(false);
+    setCollectionRenameError("");
+  }
+
+  async function saveCollectionRename() {
+    if(!activeCollection||activeCollection.system||collectionRenameSaving)return;
+    const name=collectionRenameValue.trim();
+    if(!name){
+      setCollectionRenameError("請輸入資料夾名稱");
+      collectionRenameInputRef.current?.focus();
+      return;
+    }
+    if(name===activeCollection.name){
+      setCollectionRenaming(false);
+      return;
+    }
+    collectionRenameSubmittingRef.current=true;
+    setCollectionRenameSaving(true);
+    setCollectionRenameError("");
+    try{
+      const response=await fetch(`${API}/images/collections/${encodeURIComponent(activeCollection.id)}`,{
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({name}),
+      });
+      const data=await readResponse(response);
+      if(!response.ok){
+        setCollectionRenameError(response.status===409?"已有同名資料夾":getUserError(data,"無法修改資料夾名稱"));
+        return;
+      }
+      const renamed=data as CollectionRecord;
+      setActiveCollection(renamed);
+      setCollectionFolders(current=>current.map(folder=>folder.id===renamed.id?{...folder,...renamed}:folder));
+      setCollectionRenaming(false);
+    }catch{
+      setCollectionRenameError("目前無法修改名稱，請檢查網路後再試");
+    }finally{
+      collectionRenameSubmittingRef.current=false;
+      setCollectionRenameSaving(false);
+    }
+  }
+
   async function addCollectionFolder() {
     const name = folderName.trim();
-    if (!name) return;
+    if (!name) {
+      setFolderNameInvalid(false);
+      window.requestAnimationFrame(()=>{
+        setFolderNameInvalid(true);
+        folderNameInputRef.current?.focus();
+        if(folderNameInvalidTimer.current!==null)window.clearTimeout(folderNameInvalidTimer.current);
+        folderNameInvalidTimer.current=window.setTimeout(()=>{
+          setFolderNameInvalid(false);
+          folderNameInvalidTimer.current=null;
+        },360);
+      });
+      return;
+    }
+    setFolderNameInvalid(false);
     const response = await fetch(`${API}/images/collections`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});
     const data = await readResponse(response);
     if (response.ok) { setCollectionFolders(current => [...current,data]); setFolderName(""); }
@@ -1226,11 +1353,13 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
     setPrompt(""); setSelected([]); setSelectedColors([]); setSelectedCarrier(null); setShowElements(false); setShowColors(false); setShowCarriers(false); setShowTools(false);
     if (revisionTarget) {
       const target = revisionTarget;
+      const sourceAsset = revisionSourceAsset;
+      const displaysProduct = revisionMode === "product" || sourceAsset === "preview";
       const exchangeId = `${target.id}-${Date.now()}`;
       const chatId = activeChatId;
       setConversationStarted(true); setBusy(true); setRevisionTarget(null);
       const modeLabel = revisionMode === "palette" ? "更換配色" : revisionMode === "elements" ? "更換元素" : revisionMode === "product" ? "更換商品圖" : "原組合重新生成";
-      const pendingRevision:RevisionExchange = { id:exchangeId, createdAt:Date.now(), user:revisionMode === "product" ? `${modeLabel}：${prompt.trim()}` : `${modeLabel}${prompt.trim() ? `：${prompt.trim()}` : ""}`, sourceImage:revisionSourceImage(target,revisionMode), reply:revisionMode === "product" ? "正在把同一個圖騰套用到新的商品設定…" : revisionMode === "palette" ? "正在判斷最適合的換色方式…" : "正在依照你的要求修改這張圖騰…", pending:true, displayAsset:revisionMode === "product" ? "preview" : "motif" };
+      const pendingRevision:RevisionExchange = { id:exchangeId, createdAt:Date.now(), user:revisionMode === "product" ? `${modeLabel}：${prompt.trim()}` : `${modeLabel}${prompt.trim() ? `：${prompt.trim()}` : ""}`, sourceImage:sourceAsset==="preview"?(target.assets?.preview?.url??target.totem_url??target.url):(target.totem_url??target.url), reply:revisionMode === "product" ? "正在把同一個圖騰套用到新的商品設定…" : displaysProduct ? "正在修改圖騰，完成後會重新套用到商品…" : revisionMode === "palette" ? "正在判斷最適合的換色方式…" : "正在依照你的要求修改這張圖騰…", pending:true, displayAsset:displaysProduct ? "preview" : "motif" };
       setRevisionExchanges(current => [...current, pendingRevision]);
       if (chatId) persistChatHistory(current => current.map(chat => chat.id === chatId ? {...chat,revisionExchanges:[...chat.revisionExchanges,pendingRevision]} : chat));
       try {
@@ -1238,9 +1367,9 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
         if (revisionMode === "product") {
           data = await requestProtectedImage(`${API}/images/${target.id}/preview/variant`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({instruction:prompt.trim()}) }, chatId ?? undefined, exchangeId);
         } else {
-          data = await requestProtectedImage(`${API}/images/${target.id}/regenerate`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({instruction:revisionInstruction,mode:revisionMode}) }, chatId ?? undefined, exchangeId);
+          data = await requestProtectedImage(`${API}/images/${target.id}/regenerate`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({instruction:revisionInstruction,mode:revisionMode,preview_mode:sourceAsset==="preview"?"template":"current"}) }, chatId ?? undefined, exchangeId);
         }
-        const completed:Partial<RevisionExchange> = {reply:revisionMode === "product" ? "新的商品圖已完成。" : "已依照你的要求產生新的圖騰。",image:data,pending:false};
+        const completed:Partial<RevisionExchange> = {reply:displaysProduct ? "新的商品圖已完成。" : "已依照你的要求產生新的圖騰。",image:data,pending:false};
         setRevisionExchanges(current => current.map(exchange => exchange.id === exchangeId ? {...exchange,...completed} : exchange));
         if (chatId) patchStoredRevision(chatId, exchangeId, completed);
       } catch (error) {
@@ -1372,11 +1501,28 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
     setSelectedCarrier(value=>value===product?null:product);
   }
 
-  async function generateCarrierPreview(imageId:string,product:string) {
+  async function generateCarrierPreview(image:ImageRecord,product:string) {
+    const exchangeId=`carrier-${image.id}-${Date.now()}`;
+    const chatId=activeChatId;
+    const pendingRevision:RevisionExchange={
+      id:exchangeId,
+      createdAt:Date.now(),
+      user:`生成商品照：${product}`,
+      sourceImage:image.totem_url??image.url,
+      reply:`正在將圖騰套用到${product}…`,
+      pending:true,
+      expectedImage:true,
+      displayAsset:"preview",
+    };
+    setRevisionExchanges(current=>[...current,pendingRevision]);
+    if(chatId)persistChatHistory(current=>current.map(chat=>chat.id===chatId?{
+      ...chat,
+      revisionExchanges:[...chat.revisionExchanges,pendingRevision],
+    }:chat));
     setPreviewGenerationCount(count=>count+1);
     try {
       const updated=await requestProtectedImage(
-        `${API}/images/${imageId}/preview`,
+        `${API}/images/${image.id}/preview`,
         {
           method:"POST",
           headers:{"Content-Type":"application/json"},
@@ -1386,10 +1532,21 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
             display_style:"白色商品＋白底",
           }),
         },
+        chatId??undefined,
+        exchangeId,
       );
-      updateImage(imageId,updated);
+      const completed:Partial<RevisionExchange>={
+        reply:`${product}商品照已完成。`,
+        image:updated,
+        pending:false,
+      };
+      setRevisionExchanges(current=>current.map(exchange=>exchange.id===exchangeId?{...exchange,...completed}:exchange));
+      if(chatId)patchStoredRevision(chatId,exchangeId,completed);
     } catch (error) {
-      setStatus(userFacingMessage(error,"商品圖生成失敗，請稍後再試。"));
+      const message=userFacingMessage(error,"商品圖生成失敗，請稍後再試。");
+      setStatus(message);
+      setRevisionExchanges(current=>current.map(exchange=>exchange.id===exchangeId?{...exchange,reply:message,pending:false}:exchange));
+      if(chatId)patchStoredRevision(chatId,exchangeId,{reply:message,pending:false});
     } finally {
       setPreviewGenerationCount(count=>Math.max(0,count-1));
     }
@@ -1434,7 +1591,10 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
     ...generationExchanges.map(value => {const exchange=normalizeGenerationExchange(value);return {kind:"generation" as const, createdAt:(exchange.createdAt ?? Number(exchange.id.split("-").at(-1))) || 0, exchange};}),
   ].sort((left,right) => left.createdAt - right.createdAt);
   return <div className="app-shell">
-    <header className={`topbar ${page !== "chat" ? "topbar-tall" : ""} ${topbarScrolled ? "scrolled" : ""} ${page !== "chat" && topbarHidden ? "topbar-hidden" : ""}`}>{page === "favorites" && activeCollection ? <button type="button" onClick={openFavorites} aria-label="返回我的收藏"><BackIcon /></button> : <button ref={menuButtonRef} type="button" onClick={() => setSidebarOpen(true)} aria-label="開啟功能列" aria-expanded={sidebarOpen} aria-controls="app-navigation-drawer"><MenuIcon /></button>}{page !== "chat" && <><div className="topbar-copy"><strong className="topbar-title">{page === "images" ? "我的圖片" : activeCollection?.name ?? "我的收藏"}</strong><small>圖片只保留 14 天</small></div>{page === "favorites" && !activeCollection && <button type="button" className={`topbar-edit-collections ${collectionEditMode?"active":""}`} onClick={()=>setCollectionEditMode(value=>!value)} aria-label={collectionEditMode?"結束編輯資料夾":"編輯資料夾"} aria-pressed={collectionEditMode}><EditCollectionsIcon /></button>}</>}</header>
+    <header className={`topbar ${page !== "chat" ? "topbar-tall" : ""} ${topbarScrolled ? "scrolled" : ""} ${page !== "chat" && topbarHidden ? "topbar-hidden" : ""}`}>
+      {page==="favorites"&&activeCollection?<button type="button" onClick={collectionRenaming?cancelCollectionRename:openFavorites} aria-label={collectionRenaming?"取消修改名稱":"返回我的收藏"}><BackIcon /></button>:<button ref={menuButtonRef} type="button" onClick={()=>setSidebarOpen(true)} aria-label="開啟功能列" aria-expanded={sidebarOpen} aria-controls="app-navigation-drawer"><MenuIcon /></button>}
+      {page!=="chat"&&<>{collectionRenaming&&activeCollection?<form className={`topbar-rename-form ${collectionRenameError?"invalid":""}`} onSubmit={event=>{event.preventDefault();void saveCollectionRename();}}><input ref={collectionRenameInputRef} value={collectionRenameValue} maxLength={60} enterKeyHint="done" aria-label="新的資料夾名稱" aria-invalid={Boolean(collectionRenameError)} disabled={collectionRenameSaving} onBlur={()=>{if(!collectionRenameSubmittingRef.current)cancelCollectionRename();}} onChange={event=>{setCollectionRenameValue(event.target.value);setCollectionRenameError("");}} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();cancelCollectionRename();}}}/>{collectionRenameError&&<small>{collectionRenameError}</small>}</form>:<div className="topbar-copy">{activeCollection&&!activeCollection.system?<button type="button" className="topbar-title editable" onClick={beginCollectionRename} aria-label="修改資料夾名稱">{activeCollection.name}</button>:<strong className="topbar-title">{page==="images"?"我的圖片":activeCollection?.name??"我的收藏"}</strong>}<small>圖片只保留 14 天</small></div>}{page==="favorites"&&!activeCollection&&<button type="button" className={`topbar-edit-collections ${collectionEditMode?"active":""}`} onClick={()=>setCollectionEditMode(value=>!value)} aria-label={collectionEditMode?"結束編輯資料夾":"編輯資料夾"} aria-pressed={collectionEditMode}><EditCollectionsIcon /></button>}</>}
+    </header>
     {collectionPendingDelete&&createPortal(<div className="collection-delete-layer" onKeyDown={event=>{if(event.key==="Escape")setCollectionPendingDelete(null);}}><button type="button" className="collection-delete-backdrop" tabIndex={-1} onClick={()=>setCollectionPendingDelete(null)} aria-label="取消刪除資料夾"/><section className="collection-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-delete-title"><div className="collection-delete-mark" aria-hidden="true">−</div><h2 id="collection-delete-title">刪除資料夾？</h2><p>確定要刪除「{collectionPendingDelete.name}」嗎？</p><small>資料夾內的圖片不會被刪除。</small><div className="collection-delete-actions"><button type="button" onClick={()=>setCollectionPendingDelete(null)}>取消</button><button type="button" className="danger" disabled={deletingCollectionId!==null} onClick={()=>void deleteCollectionFolder(collectionPendingDelete)}>{deletingCollectionId?"刪除中…":"刪除"}</button></div></section></div>,document.body)}
     {sidebarPresence.present && <div ref={drawerLayerRef} className="drawer-layer" data-motion={sidebarPresence.phase} onKeyDown={handleDrawerKeyDown}><button className="drawer-backdrop" type="button" tabIndex={-1} onClick={closeSidebar} aria-label="關閉功能列"/><aside id="app-navigation-drawer" className="side-drawer" role="dialog" aria-modal="true" aria-label="功能列">
       <div className="drawer-heading"><strong>AI</strong><button type="button" className="close-image-button" onClick={closeSidebar} aria-label="關閉功能列"><CloseButtonIcon /></button></div>
@@ -1447,7 +1607,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
     </aside><button type="button" className="drawer-logout" onClick={()=>void onLogout()} aria-label="登出" title="登出"><LogoutIcon /></button></div>}
 
     <main className="workspace">
-      {page === "favorites" ? <section className={`favorites-page ${activeCollection ? "collection-assets-page" : ""}`} onScroll={handleGalleryScroll}>{activeCollection ? favoriteImages.length === 0 ? <p className="favorites-empty">這個資料夾還沒有圖片。</p> : <div className="favorites-grid">{favoriteImages.map(asset => <GalleryAssetCard asset={asset} onChanged={updateGalleryAsset} key={`${asset.record_id}-${asset.asset_type}`}/>)}</div> : <div className={`collection-folder-grid ${collectionEditMode?"editing":""}`}>{collectionFolders.map(folder => <div className="collection-folder-item" key={folder.id}><button type="button" className="collection-folder-card" disabled={collectionEditMode} onClick={() => openCollection(folder)}><CollectionCover urls={folder.preview_urls ?? (folder.preview_url ? [folder.preview_url] : [])}/><strong>{folder.name}</strong><small>{folder.image_count} 張圖片</small></button>{collectionEditMode&&!folder.system&&<button type="button" className="collection-folder-remove" disabled={deletingCollectionId===folder.id} onClick={()=>setCollectionPendingDelete(folder)} aria-label={`刪除${folder.name}資料夾`}>−</button>}</div>)}<form className="collection-create-card" onSubmit={event => {event.preventDefault();void addCollectionFolder();}}><div className="collection-create-cover"><i/><i/><i/><button type="submit">建立</button></div><input value={folderName} onChange={event=>setFolderName(event.target.value)} aria-label="新資料夾名稱" placeholder="資料夾名稱"/></form></div>}</section> : page === "images" ? <section className="favorites-page images-page" onScroll={handleGalleryScroll}>{allImages.length === 0 ? <p className="favorites-empty">還沒有圖片。</p> : <div className="favorites-grid">{allImages.map(asset => <GalleryAssetCard asset={asset} onChanged={updateGalleryAsset} key={`${asset.record_id}-${asset.asset_type}`}/>)}</div>}</section> : <section ref={chatScrollRef} className="hero" onScroll={handleChatScroll}>
+      {page === "favorites" ? <section key="favorites-page" className={`favorites-page ${activeCollection ? "collection-assets-page" : ""}`} onScroll={handleGalleryScroll}>{activeCollection ? favoriteImages.length === 0 ? <p className="favorites-empty">這個資料夾還沒有圖片。</p> : <MasonryAssetGrid assets={favoriteImages} onChanged={updateGalleryAsset}/> : <div className={`collection-folder-grid ${collectionEditMode?"editing":""}`}>{collectionFolders.map(folder => <div className="collection-folder-item" key={folder.id}><button type="button" className="collection-folder-card" disabled={collectionEditMode} onClick={() => openCollection(folder)}><CollectionCover urls={folder.preview_urls ?? (folder.preview_url ? [folder.preview_url] : [])}/><strong>{folder.name}</strong><small>{folder.image_count} 張圖片</small></button>{collectionEditMode&&!folder.system&&<button type="button" className="collection-folder-remove" disabled={deletingCollectionId===folder.id} onClick={()=>setCollectionPendingDelete(folder)} aria-label={`刪除${folder.name}資料夾`}>−</button>}</div>)}<form className={`collection-create-card ${folderNameInvalid?"invalid":""}`} onAnimationEnd={event=>{if(event.animationName==="collection-name-shake")setFolderNameInvalid(false);}} onSubmit={event => {event.preventDefault();void addCollectionFolder();}}><div className="collection-create-cover"><i/><i/><i/><button type="submit">建立</button></div><input ref={folderNameInputRef} value={folderName} onChange={event=>{setFolderName(event.target.value);if(event.target.value.trim())setFolderNameInvalid(false);}} aria-label="新資料夾名稱" aria-invalid={folderNameInvalid} placeholder="資料夾名稱"/></form></div>}</section> : page === "images" ? <section key="images-page" className="favorites-page images-page" onScroll={handleGalleryScroll}>{allImages.length === 0 ? <p className="favorites-empty">還沒有圖片。</p> : <MasonryAssetGrid assets={allImages} onChanged={updateGalleryAsset}/>}</section> : <section key="chat-page" ref={chatScrollRef} className="hero" onScroll={handleChatScroll}>
         {chatLoading && <div className="chat-loading" role="status"><span className="chat-loading-spinner" aria-hidden="true"/><p>載入對話中…</p></div>}
         {!chatLoading && !conversationStarted && <div className={`hero-intro ${homeTextReveal ? "home-text-reveal" : ""}`}>
           <h1>你說，我畫！</h1>
@@ -1456,10 +1616,10 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
         {!chatLoading && conversationStarted && <div className="chat-thread">
           {timelineExchanges.map(item => item.kind === "revision" ? <div className="revision-exchange" key={item.exchange.id}>
             <div className="message user-message revision-user-message"><button type="button" className={`revision-source-link ${item.exchange.displayAsset === "preview" ? "product-source" : "motif-source"}`} onClick={()=>scrollToSourceImage(item.exchange.sourceImage)} aria-label="捲動到這次修改使用的來源圖片"><ExpiringSourceImage src={`${SERVER}${item.exchange.sourceImage}`} alt={item.exchange.displayAsset === "preview" ? "這次要求修改的原商品圖" : "這次要求修改的原圖騰"}/></button><p>{item.exchange.user}</p></div>
-            <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.image || item.exchange.imageExpired) && <div className="chat-results"><div className="gallery">{item.exchange.image ? <ImageCard image={item.exchange.image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} generateCarrierPreview={product=>generateCarrierPreview(item.exchange.image!.id,product)} generationBlocked={generationBusy} onPreviewGenerationChange={active=>setPreviewGenerationCount(count=>Math.max(0,count+(active?1:-1)))} initialAsset={item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖") ? "preview" : "motif"}/> : item.exchange.imageExpired ? <ExpiredImagePlaceholder/> : <div className="generation-placeholder" aria-hidden="true"/>}</div></div>}</div>
+            <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.image || item.exchange.imageExpired) && <div className="chat-results"><div className="gallery">{item.exchange.image ? <ImageCard image={item.exchange.image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} generateCarrierPreview={product=>generateCarrierPreview(item.exchange.image!,product)} generationBlocked={generationBusy} onPreviewGenerationChange={active=>setPreviewGenerationCount(count=>Math.max(0,count+(active?1:-1)))} initialAsset={item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖") ? "preview" : "motif"}/> : item.exchange.imageExpired ? <ExpiredImagePlaceholder showingPreview={item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖")}/> : <div className={`generation-placeholder ${item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖") ? "showing-preview" : ""}`} aria-hidden="true"/>}</div></div>}</div>
           </div> : <div className="revision-exchange" key={item.exchange.id}>
             {!item.exchange.hideUserMessage && <div className="message user-message">{(item.exchange.elements.length > 0 || (item.exchange.colors?.length??0) > 0 || item.exchange.carrier) && <div className="message-tags">{item.exchange.elements.map(name => <span key={name}><ElementTagIcon name={name}/>{name}</span>)}{(item.exchange.colors??[]).map(color => <span className="color-message-tag" key={color.name}><i style={{backgroundColor:`rgb(${color.rgb.join(",")})`}}/>{color.name}</span>)}{item.exchange.carrier&&<span className="carrier-message-tag"><CarrierIcon/>{item.exchange.carrier}</span>}</div>}{item.exchange.prompt && <p>{item.exchange.prompt}</p>}</div>}
-            <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.images.length > 0 || (item.exchange.missingImageCount??0)>0) && <div className="chat-results"><div className="gallery generation-gallery">{item.exchange.images.map(image => <ImageCard image={image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} generateCarrierPreview={product=>generateCarrierPreview(image.id,product)} generationBlocked={generationBusy} onPreviewGenerationChange={active=>setPreviewGenerationCount(count=>Math.max(0,count+(active?1:-1)))} squareCard key={image.id}/>)}{item.exchange.pending && item.exchange.images.length===0 ? Array.from({length:4},(_,index)=><div className="generation-placeholder" aria-hidden="true" key={`pending-${index}`}/>) : Array.from({length:item.exchange.missingImageCount??0},(_,index)=><ExpiredImagePlaceholder key={`expired-${index}`}/>)}</div>{item.exchange.images.length === 4 && <div className="generation-regenerate"><span>一鍵重新生成</span><button type="button" disabled={generationBusy || item.exchange.pending} onClick={()=>void regenerateGeneration(item.exchange)} aria-label="依照原提示重新生成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 6"/><path d="M19 3v5h-5"/></svg></button></div>}</div>}</div>
+            <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.images.length > 0 || (item.exchange.missingImageCount??0)>0) && <div className="chat-results"><div className="gallery generation-gallery">{item.exchange.images.map(image => <ImageCard image={image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} generateCarrierPreview={product=>generateCarrierPreview(image,product)} generationBlocked={generationBusy} onPreviewGenerationChange={active=>setPreviewGenerationCount(count=>Math.max(0,count+(active?1:-1)))} squareCard key={image.id}/>)}{item.exchange.pending && item.exchange.images.length===0 ? Array.from({length:4},(_,index)=><div className="generation-placeholder" aria-hidden="true" key={`pending-${index}`}/>) : Array.from({length:item.exchange.missingImageCount??0},(_,index)=><ExpiredImagePlaceholder squareCard key={`expired-${index}`}/>)}</div>{item.exchange.images.length === 4 && <div className="generation-regenerate"><span>一鍵重新生成</span><button type="button" disabled={generationBusy || item.exchange.pending} onClick={()=>void regenerateGeneration(item.exchange)} aria-label="依照原提示重新生成"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 6"/><path d="M19 3v5h-5"/></svg></button></div>}</div>}</div>
           </div>)}
         </div>}
         {!chatLoading && !conversationStarted && <div className={`hero-intro-tools ${introToolsAbsorbing?"tools-absorbing":""}`}>

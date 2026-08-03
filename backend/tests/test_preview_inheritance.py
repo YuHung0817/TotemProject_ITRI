@@ -97,3 +97,127 @@ def test_revised_motif_skips_preview_when_source_has_none(monkeypatch) -> None:
 
     assert result is revised
     assert "preview" not in result["assets"]
+
+
+def test_revised_product_source_can_use_built_in_template_pipeline(
+    monkeypatch,
+) -> None:
+    generated_requests = []
+
+    def fake_generate(record, request, product_reference=None):  # type: ignore[no-untyped-def]
+        assert record["id"] == "revised-record"
+        assert product_reference is None
+        generated_requests.append(request)
+        return {
+            "filename": "template-preview.png",
+            "url": "/generated/images/template-preview.png",
+            "reference_source": "built_in",
+            "reference_filename": "tote-bag.jpg",
+        }
+
+    monkeypatch.setattr(images, "generate_preview_result", fake_generate)
+    monkeypatch.setattr(
+        images,
+        "save_record",
+        lambda _db, record, _user_id, parent_image_id=None: record,
+    )
+
+    result = images.inherit_product_preview(
+        None,  # type: ignore[arg-type]
+        source_record(),
+        revised_record(),
+        "user-id",
+        preview_mode="template",
+    )
+
+    request = generated_requests[0]
+    assert request.product == "托特包"
+    assert request.placement == "AI自動決定位置"
+    assert request.display_style == "白色商品＋白底"
+    assert result["assets"]["preview"]["parameters"]["reference_source"] == "built_in"
+
+
+def test_first_preview_for_separate_chat_message_creates_a_new_record(
+    monkeypatch,
+) -> None:
+    source = {
+        "id": "original-motif",
+        "created_at": "2026-08-03 01:25:03",
+        "assets": {
+            "motif": {
+                "filename": "motif.png",
+                "url": "/generated/images/motif.png",
+                "saved": True,
+                "favorite": True,
+                "collection_ids": ["favorites"],
+            }
+        },
+    }
+    saved: list[tuple[dict, str | None]] = []
+
+    def fake_save(
+        _db,
+        record,
+        _user_id,
+        parent_image_id=None,
+        **_kwargs,
+    ):  # type: ignore[no-untyped-def]
+        saved.append((record, parent_image_id))
+        return record
+
+    monkeypatch.setattr(images, "save_record", fake_save)
+    result = images.save_preview_version(
+        None,  # type: ignore[arg-type]
+        source,
+        "user-id",
+        images.ProductPreviewRequest(product="托特包"),
+        {
+            "filename": "preview.png",
+            "url": "/generated/images/preview.png",
+        },
+        separate_message=True,
+    )
+
+    assert result["id"] != source["id"]
+    assert result["derived_from"] == source["id"]
+    assert result["assets"]["preview"]["filename"] == "preview.png"
+    assert "preview" not in source["assets"]
+    assert saved[0][1] == source["id"]
+    assert result["assets"]["motif"]["saved"] is False
+    assert result["assets"]["motif"]["favorite"] is False
+    assert result["assets"]["motif"]["collection_ids"] == []
+
+
+def test_first_preview_without_separate_message_stays_on_source_record(
+    monkeypatch,
+) -> None:
+    source = {
+        "id": "initial-generation",
+        "assets": {
+            "motif": {
+                "filename": "motif.png",
+                "url": "/generated/images/motif.png",
+            }
+        },
+    }
+    save_calls: list[dict] = []
+
+    def fake_save(_db, record, _user_id, **kwargs):  # type: ignore[no-untyped-def]
+        save_calls.append(kwargs)
+        return record
+
+    monkeypatch.setattr(images, "save_record", fake_save)
+    result = images.save_preview_version(
+        None,  # type: ignore[arg-type]
+        source,
+        "user-id",
+        images.ProductPreviewRequest(product="托特包"),
+        {
+            "filename": "preview.png",
+            "url": "/generated/images/preview.png",
+        },
+    )
+
+    assert result["id"] == source["id"]
+    assert result["assets"]["preview"]["filename"] == "preview.png"
+    assert save_calls == [{"refresh_expiry": True}]

@@ -50,6 +50,7 @@ class ProductPreviewResolution(BaseModel):
 class RegenerateRequest(BaseModel):
     instruction: str = Field(min_length=1)
     mode: Literal["elements", "palette", "same"] = "same"
+    preview_mode: Literal["current", "template"] = "current"
 
 
 class MotifRevisionResolution(BaseModel):
@@ -135,6 +136,10 @@ class CollectionRecord(BaseModel):
 
 
 class CollectionCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class CollectionRenameRequest(BaseModel):
     name: str = Field(min_length=1, max_length=60)
 
 

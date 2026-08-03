@@ -6,6 +6,10 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=1024)
 
 
+class ReplaceSessionRequest(BaseModel):
+    challenge: str = Field(min_length=32, max_length=256)
+
+
 class AuthenticatedUser(BaseModel):
     id: str
     username: str

@@ -13,7 +13,9 @@ from app.services.database_catalog_service import (
     delete_asset,
     find_record,
     list_collections,
+    list_product_preview_records,
     list_records,
+    rename_collection,
     save_record,
 )
 
@@ -77,6 +79,20 @@ def test_deleting_collection_removes_links_but_preserves_assets() -> None:
         assert db.get(Collection, collection.id) is None
         assert db.get(CollectionAsset, (collection.id, asset.id)) is None
         assert db.get(ImageAsset, asset.id) is not None
+
+
+def test_custom_collection_can_be_renamed() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        db.add(User(id=DEFAULT_USER_ID, username="store"))
+        db.commit()
+        folder = create_collection(db, DEFAULT_USER_ID, "舊名稱")
+
+        renamed = rename_collection(db, folder["id"], DEFAULT_USER_ID, " 新名稱 ")
+
+        saved = db.get(Collection, folder["id"])
+        assert renamed["name"] == "新名稱"
+        assert saved is not None and saved.name == "新名稱"
 
 
 def test_database_catalog_round_trip_preserves_api_shape_and_collections() -> None:
@@ -313,6 +329,55 @@ def test_derived_version_has_an_independent_bundle_expiry(monkeypatch) -> None:
         )
         assert child.parent_image_id == parent.id
         assert parent.assets[0].storage_key == child.assets[0].storage_key
+
+
+def test_product_previews_are_grouped_by_shared_motif_storage_key() -> None:
+    engine = sqlite_engine()
+    now = datetime.now(timezone.utc)
+
+    def record(record_id: str, motif: str, preview: str | None) -> dict:
+        assets = {
+            "motif": {
+                "type": "motif",
+                "filename": motif,
+                "url": f"/generated/images/{motif}",
+            }
+        }
+        if preview:
+            assets["preview"] = {
+                "type": "preview",
+                "filename": preview,
+                "url": f"/generated/images/{preview}",
+            }
+        return {
+            "id": record_id,
+            "filename": motif,
+            "url": f"/generated/images/{motif}",
+            "created_at": now.isoformat(),
+            "prompt": "group",
+            "request": {"prompt": "group", "elements": []},
+            "assets": assets,
+        }
+
+    with Session(engine) as db:
+        db.add(User(id=DEFAULT_USER_ID, username="store"))
+        db.commit()
+        save_record(db, record("source", "shared.png", "shirt.png"), DEFAULT_USER_ID)
+        save_record(
+            db,
+            record("variant", "shared.png", "bag.png"),
+            DEFAULT_USER_ID,
+            parent_image_id="source",
+        )
+        save_record(db, record("no-preview", "shared.png", None), DEFAULT_USER_ID)
+        save_record(db, record("other", "other.png", "other-preview.png"), DEFAULT_USER_ID)
+
+        previews = list_product_preview_records(db, "source", DEFAULT_USER_ID)
+
+        assert {item["id"] for item in previews} == {"source", "variant"}
+        assert {
+            item["assets"]["preview"]["filename"] for item in previews
+        } == {"shirt.png", "bag.png"}
 
 
 def test_expired_records_are_hidden_from_images_and_collections() -> None:

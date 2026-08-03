@@ -19,6 +19,7 @@ from app.schemas.image import (
     AssetStateRequest,
     CollectionCreateRequest,
     CollectionRecord,
+    CollectionRenameRequest,
     GalleryAsset,
     GenerateRequest,
     GenerateResponse,
@@ -34,7 +35,9 @@ from app.services.database_catalog_service import (
     delete_asset,
     find_record,
     list_collections,
+    list_product_preview_records,
     list_records,
+    rename_collection,
     save_record,
     save_records,
 )
@@ -128,6 +131,32 @@ def add_preview(record: dict, request: ProductPreviewRequest, result: dict) -> N
             ),
         },
     }
+
+
+def save_preview_version(
+    db: Session,
+    source: dict,
+    user_id: str,
+    request: ProductPreviewRequest,
+    result: dict,
+    *,
+    separate_message: bool = False,
+) -> dict:
+    """Save a preview, preserving the source record for a separate chat reply."""
+    if not separate_message and not (source.get("assets") or {}).get("preview"):
+        add_preview(source, request, result)
+        return save_record(db, source, user_id, refresh_expiry=True)
+
+    variant = copy.deepcopy(source)
+    variant["id"] = uuid.uuid4().hex[:12]
+    variant["created_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    variant["derived_from"] = source["id"]
+    for asset in variant.get("assets", {}).values():
+        asset["saved"] = False
+        asset["favorite"] = False
+        asset["collection_ids"] = []
+    add_preview(variant, request, result)
+    return save_record(db, variant, user_id, parent_image_id=source["id"])
 
 
 def resolve_product_preview_request(
@@ -225,39 +254,54 @@ def inherit_product_preview(
     source: dict,
     revised: dict,
     user_id: str,
+    preview_mode: Literal["current", "template"] = "current",
 ) -> dict:
     """Reapply a revised motif to the source record's existing product preview."""
     preview_asset = (source.get("assets") or {}).get("preview") or {}
     parameters = preview_asset.get("parameters") or {}
     preview_filename = Path(preview_asset.get("filename") or "").name
-    if not preview_filename or not parameters.get("product"):
+    if not parameters.get("product"):
         return revised
-    preview_path = image_path(preview_filename)
-    if not preview_path.is_file():
-        return revised
-
-    request = ProductPreviewRequest.model_validate(parameters).model_copy(
-        update={
-            "instruction": (
-                "Keep the exact same product, product color, material, camera view, "
-                "composition, background, and motif placement. Replace only the old "
-                "motif artwork with the newly uploaded motif artwork."
-            ),
-            "preview_prompt": (
-                "Preserve the complete current product presentation and replace only "
-                "its motif with the new motif."
-            ),
-        }
-    )
+    if preview_mode == "template":
+        request = ProductPreviewRequest(
+            product=parameters["product"],
+            placement="AI自動決定位置",
+            display_style="白色商品＋白底",
+            preview_size=parameters.get("preview_size", "1024x1024"),
+            preview_quality=parameters.get("preview_quality", "medium"),
+        )
+        preview_path = None
+    else:
+        if not preview_filename:
+            return revised
+        preview_path = image_path(preview_filename)
+        if not preview_path.is_file():
+            return revised
+        request = ProductPreviewRequest.model_validate(parameters).model_copy(
+            update={
+                "instruction": (
+                    "Keep the exact same product, product color, material, camera view, "
+                    "composition, background, and motif placement. Replace only the old "
+                    "motif artwork with the newly uploaded motif artwork."
+                ),
+                "preview_prompt": (
+                    "Preserve the complete current product presentation and replace only "
+                    "its motif with the new motif."
+                ),
+            }
+        )
     try:
-        with preview_path.open("rb") as current_preview:
-            result = generate_preview_result(
-                revised,
-                request,
-                product_reference=current_preview,
-            )
-        result["reference_source"] = "current_preview"
-        result["reference_filename"] = preview_filename
+        if preview_path is None:
+            result = generate_preview_result(revised, request)
+        else:
+            with preview_path.open("rb") as current_preview:
+                result = generate_preview_result(
+                    revised,
+                    request,
+                    product_reference=current_preview,
+                )
+            result["reference_source"] = "current_preview"
+            result["reference_filename"] = preview_filename
         add_preview(revised, request, result)
         revised = save_record(
             db,
@@ -532,6 +576,18 @@ def add_collection_folder(
     return CollectionRecord(**create_collection(db, user.id, request.name))
 
 
+@router.patch("/collections/{collection_id}", response_model=CollectionRecord)
+def rename_collection_folder(
+    collection_id: str,
+    request: CollectionRenameRequest,
+    user: CurrentUser,
+    db: Session = Depends(get_db),
+) -> CollectionRecord:
+    return CollectionRecord(
+        **rename_collection(db, collection_id, user.id, request.name)
+    )
+
+
 @router.delete("/collections/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_collection_folder(
     collection_id: str, user: CurrentUser, db: Session = Depends(get_db)
@@ -700,9 +756,19 @@ def preview(
     client_exchange_id: ClientExchangeId = None,
     db: Session = Depends(get_db),
 ) -> ImageRecord:
+    record = find_record(db, image_id, user.id)
+    used_products = {
+        str(
+            ((item.get("assets") or {}).get("preview") or {})
+            .get("parameters", {})
+            .get("product")
+        )
+        for item in list_product_preview_records(db, image_id, user.id)
+    }
+    if request.product in used_products:
+        raise HTTPException(409, "This product carrier has already been generated")
     require_storage_capacity("product_preview", image_id=image_id)
     log_event("operation_started", operation="product_preview", image_id=image_id)
-    record = find_record(db, image_id, user.id)
     job = acquire_generation_job(
         db,
         idempotency_key,
@@ -719,8 +785,14 @@ def preview(
         result = generate_preview_result(record, request)
         # Re-read after the slow API call so concurrent collection changes survive.
         record = find_record(db, image_id, user.id)
-        add_preview(record, request, result)
-        record = save_record(db, record, user.id, refresh_expiry=True)
+        record = save_preview_version(
+            db,
+            record,
+            user.id,
+            request,
+            result,
+            separate_message=bool(chatroom_id and client_exchange_id),
+        )
         complete_generation_job(db, job, [record["id"]])
     except Exception as exc:
         fail_generation_job(db, job.id, exc)
@@ -732,6 +804,18 @@ def preview(
         job_id=job.id,
     )
     return ImageRecord(**record)
+
+
+@router.get("/{image_id}/product-previews", response_model=list[ImageRecord])
+def product_previews(
+    image_id: str,
+    user: CurrentUser,
+    db: Session = Depends(get_db),
+) -> list[ImageRecord]:
+    return [
+        ImageRecord(**record)
+        for record in list_product_preview_records(db, image_id, user.id)
+    ]
 
 
 @router.post("/{image_id}/preview/random", response_model=ImageRecord)
@@ -778,8 +862,7 @@ def random_preview(
         result = generate_preview_result(record, request)
         # Do not save the stale snapshot from before the image API call.
         record = find_record(db, image_id, user.id)
-        add_preview(record, request, result)
-        record = save_record(db, record, user.id, refresh_expiry=True)
+        record = save_preview_version(db, record, user.id, request, result)
         complete_generation_job(db, job, [record["id"]])
         return ImageRecord(**record)
     except Exception as exc:
@@ -940,7 +1023,9 @@ def _regenerate_image(
             ) from exc
         used_image_api = bool(new.pop("_used_image_api", False))
         new = save_record(db, new, user_id, parent_image_id=image_id)
-        new = inherit_product_preview(db, old, new, user_id)
+        new = inherit_product_preview(
+            db, old, new, user_id, preview_mode=revision.preview_mode
+        )
         log_event(
             "operation_succeeded",
             operation="image_recolor" if used_image_api else "code_recolor",
@@ -957,7 +1042,9 @@ def _regenerate_image(
                 "regenerate_same", exc, image_id=image_id
             ) from exc
         new = save_record(db, new, user_id, parent_image_id=image_id)
-        new = inherit_product_preview(db, old, new, user_id)
+        new = inherit_product_preview(
+            db, old, new, user_id, preview_mode=revision.preview_mode
+        )
         log_event(
             "operation_succeeded",
             operation="regenerate_same",
@@ -1012,7 +1099,9 @@ def _regenerate_image(
             "motif_regenerate", exc, image_id=image_id
         ) from exc
     new = save_record(db, new, user_id, parent_image_id=image_id)
-    new = inherit_product_preview(db, old, new, user_id)
+    new = inherit_product_preview(
+        db, old, new, user_id, preview_mode=revision.preview_mode
+    )
     log_event(
         "operation_succeeded",
         operation="motif_regenerate",

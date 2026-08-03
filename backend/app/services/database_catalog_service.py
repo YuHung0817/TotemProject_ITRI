@@ -155,6 +155,61 @@ def find_record(db: Session, image_id: str, user_id: str) -> dict[str, Any]:
     return record_to_dict(record)
 
 
+def list_product_preview_records(
+    db: Session, image_id: str, user_id: str
+) -> list[dict[str, Any]]:
+    """Return every active product preview that uses the exact same motif file."""
+    source = _load_record(db, image_id, user_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail=f"Image not found: {image_id}")
+    motif = next(
+        (
+            asset
+            for asset in source.assets
+            if asset.asset_type == "motif"
+            and asset.deleted_at is None
+            and asset.deletion_status == "active"
+        ),
+        None,
+    )
+    if motif is None:
+        return []
+
+    records = (
+        db.scalars(
+            select(ImageRecord)
+            .join(ImageAsset)
+            .where(
+                ImageRecord.user_id == user_id,
+                ImageRecord.deleted_at.is_(None),
+                ImageRecord.expires_at > datetime.now(timezone.utc),
+                ImageAsset.asset_type == "motif",
+                ImageAsset.storage_key == motif.storage_key,
+                ImageAsset.deleted_at.is_(None),
+                ImageAsset.deletion_status == "active",
+            )
+            .options(
+                selectinload(ImageRecord.assets)
+                .selectinload(ImageAsset.collection_links)
+                .selectinload(CollectionAsset.collection)
+            )
+            .order_by(ImageRecord.created_at.asc())
+        )
+        .unique()
+        .all()
+    )
+    return [
+        record_to_dict(record)
+        for record in records
+        if any(
+            asset.asset_type == "preview"
+            and asset.deleted_at is None
+            and asset.deletion_status == "active"
+            for asset in record.assets
+        )
+    ]
+
+
 def _upsert_asset(
     db: Session,
     record: ImageRecord,
@@ -377,6 +432,38 @@ def create_collection(db: Session, user_id: str, name: str) -> dict[str, Any]:
         "preview_url": None,
         "preview_urls": [],
     }
+
+
+def rename_collection(
+    db: Session, collection_id: str, user_id: str, name: str
+) -> dict[str, Any]:
+    collection = db.scalar(
+        select(Collection).where(
+            Collection.id == collection_id,
+            Collection.user_id == user_id,
+        )
+    )
+    if collection is None:
+        raise HTTPException(404, "Collection not found")
+    if collection.is_system:
+        raise HTTPException(422, "System collections cannot be renamed")
+    clean_name = name.strip()
+    if not clean_name:
+        raise HTTPException(422, "Collection name cannot be empty")
+    duplicate = db.scalar(
+        select(Collection).where(
+            Collection.user_id == user_id,
+            Collection.id != collection_id,
+            func.lower(Collection.name) == clean_name.casefold(),
+        )
+    )
+    if duplicate is not None:
+        raise HTTPException(409, "Collection name already exists")
+    collection.name = clean_name
+    db.commit()
+    return next(
+        item for item in list_collections(db, user_id) if item["id"] == collection_id
+    )
 
 
 def delete_collection(db: Session, collection_id: str, user_id: str) -> None:
