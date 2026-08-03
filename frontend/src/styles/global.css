@@ -304,7 +304,8 @@ html[data-image-hero-transition="close"]::view-transition-new(root) { animation:
 .image-detail-media { position:relative; min-width:0; min-height:0; width:min(100%,440px); aspect-ratio:1; flex:0 1 440px; align-self:center; overflow:hidden; display:grid; place-items:center; }
 .image-detail-media.preview-book { overflow:hidden; }
 .image-detail-content img { width:auto; max-width:100%; height:auto; max-height:100%; display:block; object-fit:contain; border-radius:12px; box-shadow:0 3px 18px rgba(0,0,0,.1); }
-.preview-book-controls { min-height:32px; display:flex; align-items:center; justify-content:center; gap:16px; color:#6d5a42; font-size:11px; font-weight:700; }
+.preview-book-controls { width:min(100%,440px); height:32px; min-height:32px; flex:0 0 32px; align-self:center; display:flex; align-items:center; justify-content:center; gap:16px; color:#6d5a42; font-size:11px; font-weight:700; }
+.preview-book-controls.placeholder { visibility:hidden; }
 .preview-book-controls button { width:32px; height:32px; display:grid; place-items:center; border:1px solid #fff; border-radius:50%; background:rgba(255,255,255,.8); color:#50391C; font-size:24px; line-height:1; }
 .preview-book-controls button:disabled { opacity:.28; }
 .detail-swap-image { animation:detail-swap-fallback-next 360ms cubic-bezier(.22,1,.36,1) both; }
