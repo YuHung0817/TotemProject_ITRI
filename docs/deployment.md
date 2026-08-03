@@ -79,6 +79,9 @@ sudo -u safu bash -c 'set -a; source /etc/safu/safu.env; set +a; cd /opt/safu/ba
 
 ## 日後更新
 
+完整的部署前備份、驗證、日誌、清理、密碼重設與 DB 結構說明，請見
+[管理者維運手冊](operations-runbook.md)。
+
 ```bash
 cd /opt/safu
 sudo git pull --ff-only

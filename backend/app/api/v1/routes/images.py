@@ -791,7 +791,10 @@ def preview(
             user.id,
             request,
             result,
-            separate_message=bool(chatroom_id and client_exchange_id),
+            # This endpoint adds a product photo after the initial generation.
+            # Always preserve the source record, even if optional chat headers
+            # are temporarily unavailable on the client.
+            separate_message=True,
         )
         complete_generation_job(db, job, [record["id"]])
     except Exception as exc:

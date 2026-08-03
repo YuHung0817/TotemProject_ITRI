@@ -481,6 +481,7 @@ SQLite 是目前唯一的結構化資料來源。舊 JSON catalog 與 localStora
 部署設定已放在：
 
 - [EC2 部署步驟](docs/deployment.md)
+- [管理者維運手冊（更新、日誌、清理、密碼與 DB）](docs/operations-runbook.md)
 - [EC2 自動安裝腳本](deploy/setup-ec2.sh)
 - [Nginx 設定](deploy/nginx/safu.conf)
 - [FastAPI systemd service](deploy/systemd/safu-api.service)

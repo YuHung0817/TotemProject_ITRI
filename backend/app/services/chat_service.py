@@ -99,6 +99,14 @@ def link_images(
     if unknown_ids:
         raise HTTPException(422, f"Unknown image records: {sorted(unknown_ids)}")
     for record in records:
+        if record.message_id is not None and record.message_id != assistant.id:
+            raise HTTPException(
+                409,
+                (
+                    f"Image record {record.id} is already linked to another message; "
+                    "create a derived image record instead of moving it"
+                ),
+            )
         record.chatroom_id = room.id
         record.message_id = assistant.id
 

@@ -162,9 +162,10 @@ body { background:#eef7fc url("../assets/background.png") center/cover no-repeat
 .expired-image-placeholder > span { width:36px; height:36px; display:grid; place-items:center; border:3px solid currentColor; border-radius:50%; font-size:25px; font-weight:400; line-height:1; }
 .expired-image-placeholder p { margin:0; font-size:12px; line-height:16px; }
 @keyframes generation-placeholder-shimmer { to { transform:translateX(100%); } }
-.generation-regenerate { margin:12px 0 0; display:flex; align-items:center; gap:8px; color:inherit; font-size:14px; font-weight:400; line-height:1.55; }
-.generation-regenerate button { width:34px; height:34px; margin:-8px; padding:0; display:grid; place-items:center; border:0; background:transparent; color:#fff; }
-.generation-regenerate button svg { width:17px; height:17px; padding:2.5px; box-sizing:border-box; border-radius:50%; background:#84B0FF; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.generation-regenerate { width:88%; margin:12px 0 0; display:flex; justify-content:center; }
+.generation-regenerate button { width:104px; height:34px; padding:0 12px; display:flex; align-items:center; justify-content:flex-start; gap:8px; border:1px solid rgba(255,255,255,.4); border-radius:17px; background:rgba(255,255,255,.4); color:#50391C; font-size:13px; font-weight:500; line-height:1; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.generation-regenerate button svg { width:16px; height:16px; flex:0 0 16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.generation-regenerate button span { white-space:nowrap; }
 .generation-regenerate button:disabled { opacity:.55; cursor:not-allowed; }
 .composer { position:relative; width:100%; padding:4px 10px; border:1px solid rgba(255,255,255,.82); border-radius:30px; background:rgba(255,255,255,.35); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); box-shadow:0 5px 18px rgba(0,0,0,.08); }
 .composer:focus-within { border-color:#84B0FF; box-shadow:0 0 0 3px rgba(132,176,255,.16); }
@@ -299,8 +300,8 @@ html[data-image-hero-transition="close"]::view-transition-new(root) { animation:
 .detail-carrier-menu button small { margin-left:10px; color:#8a817b; font-size:10px; }
 .image-detail-header button.active { border-color:#fff; color:#50391C; background:#fff; }
 .image-detail-header button:disabled { opacity:.38; }
-.image-detail-content { min-width:0; min-height:0; display:flex; flex-direction:column; gap:10px; overflow:auto; padding:20px; }
-.image-detail-media { position:relative; min-width:0; min-height:0; width:100%; flex:1 1 auto; overflow:hidden; display:grid; place-items:center; }
+.image-detail-content { min-width:0; min-height:0; display:flex; flex-direction:column; justify-content:center; gap:10px; overflow:auto; padding:20px; }
+.image-detail-media { position:relative; min-width:0; min-height:0; width:min(100%,440px); aspect-ratio:1; flex:0 1 440px; align-self:center; overflow:hidden; display:grid; place-items:center; }
 .image-detail-media.preview-book { overflow:hidden; }
 .image-detail-content img { width:auto; max-width:100%; height:auto; max-height:100%; display:block; object-fit:contain; border-radius:12px; box-shadow:0 3px 18px rgba(0,0,0,.1); }
 .preview-book-controls { min-height:32px; display:flex; align-items:center; justify-content:center; gap:16px; color:#6d5a42; font-size:11px; font-weight:700; }
@@ -326,7 +327,7 @@ html[data-detail-swap-direction="previous"]::view-transition-new(active-detail-s
   .detail-swap-image { animation:none; }
   .image-detail-gallery::before { transition:none; }
 }
-.chat-image-regenerate { width:max-content; margin:8px auto 0; padding:6px 10px; display:flex; align-items:center; gap:5px; border:1px solid #fff; border-radius:999px; background:rgba(255,255,255,.8); color:#50391C; font-size:11px; font-weight:700; line-height:1; }
+.chat-image-regenerate { width:max-content; margin:8px auto 0; padding:6px 10px; display:flex; align-items:center; gap:5px; border:1px solid rgba(255,255,255,.5); border-radius:999px; background:rgba(255,255,255,.5); color:#50391C; font-size:11px; font-weight:700; line-height:1; }
 .chat-image-regenerate:active { border-color:#84B0FF; background:#84B0FF; color:#fff; }
 .similar-icon { width:18px; height:18px; display:block; }
 .similar-icon .wand-body { fill:currentColor; }

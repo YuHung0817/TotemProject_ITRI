@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+from fastapi import HTTPException
 from sqlalchemy import create_engine, delete, event, select
 from sqlalchemy.orm import Session
 
@@ -96,6 +98,56 @@ def test_sync_chatroom_splits_exchanges_and_links_images() -> None:
         room = db.get(Chatroom, "chat-1")
         assert room is not None and room.deleted_at is not None
         assert list_chatrooms(db, USER_ID) == []
+
+
+def test_sync_chatroom_refuses_to_move_an_image_to_another_message() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        db.add(User(id=USER_ID, username="store"))
+        db.commit()
+        image = save_record(db, image_payload("shared-image"), USER_ID)
+        original = ChatroomSnapshot.model_validate(
+            {
+                "id": "chat-link-guard",
+                "title": "Link guard",
+                "generationExchanges": [
+                    {
+                        "id": "original-generation",
+                        "prompt": "Original",
+                        "reply": "Created",
+                        "images": [image],
+                        "pending": False,
+                    }
+                ],
+            }
+        )
+        sync_chatroom(db, original, USER_ID)
+        record = db.get(ImageRecord, "shared-image")
+        assert record is not None
+        original_message_id = record.message_id
+
+        invalid_data = original.model_dump()
+        invalid_data["revisionExchanges"].append(
+            {
+                "id": "later-preview",
+                "user": "Generate a product photo",
+                "sourceImage": image["url"],
+                "reply": "Created",
+                "image": image,
+                "pending": False,
+                "displayAsset": "preview",
+            }
+        )
+        invalid = ChatroomSnapshot.model_validate(invalid_data)
+
+        with pytest.raises(HTTPException) as error:
+            sync_chatroom(db, invalid, USER_ID)
+
+        assert error.value.status_code == 409
+        db.rollback()
+        record = db.get(ImageRecord, "shared-image")
+        assert record is not None
+        assert record.message_id == original_message_id
 
 
 def test_reading_chatroom_does_not_refresh_expiry_or_sort_order() -> None:

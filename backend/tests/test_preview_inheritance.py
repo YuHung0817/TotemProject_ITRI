@@ -1,4 +1,7 @@
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from app.api.v1.routes import images
 
@@ -221,3 +224,57 @@ def test_first_preview_without_separate_message_stays_on_source_record(
     assert result["id"] == source["id"]
     assert result["assets"]["preview"]["filename"] == "preview.png"
     assert save_calls == [{"refresh_expiry": True}]
+
+
+def test_preview_endpoint_forces_new_record_without_chat_headers(monkeypatch) -> None:
+    source = {
+        "id": "original-motif",
+        "assets": {
+            "motif": {
+                "filename": "motif.png",
+                "url": "/generated/images/motif.png",
+            }
+        },
+    }
+    separate_values: list[bool] = []
+
+    class SaveReached(RuntimeError):
+        pass
+
+    monkeypatch.setattr(images, "find_record", lambda *_args: source)
+    monkeypatch.setattr(images, "list_product_preview_records", lambda *_args: [])
+    monkeypatch.setattr(images, "require_storage_capacity", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(images, "log_event", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        images,
+        "acquire_generation_job",
+        lambda *_args, **_kwargs: SimpleNamespace(status="pending", id="job-id"),
+    )
+    monkeypatch.setattr(
+        images,
+        "generate_preview_result",
+        lambda *_args, **_kwargs: {
+            "filename": "preview.png",
+            "url": "/generated/images/preview.png",
+        },
+    )
+
+    def capture_save(*_args, separate_message=False, **_kwargs):  # type: ignore[no-untyped-def]
+        separate_values.append(separate_message)
+        raise SaveReached
+
+    monkeypatch.setattr(images, "save_preview_version", capture_save)
+    monkeypatch.setattr(images, "fail_generation_job", lambda *_args, **_kwargs: None)
+
+    with pytest.raises(SaveReached):
+        images.preview(
+            "original-motif",
+            images.ProductPreviewRequest(product="貝殼零錢包"),
+            "idempotency-key",
+            SimpleNamespace(id="user-id"),
+            chatroom_id=None,
+            client_exchange_id=None,
+            db=None,  # type: ignore[arg-type]
+        )
+
+    assert separate_values == [True]
