@@ -53,11 +53,22 @@ def sync_generation_job_to_chat(db: Session, job: GenerationJob) -> bool:
     )
     if assistant is None:
         return False
-    if not bool((assistant.content_data or {}).get("pending", False)):
-        return False
     reply = _chat_result_message(job)
     data = dict(assistant.content_data or {})
-    data.update({"reply": reply, "pending": False})
+    if (
+        data.get("generationJobId") == job.id
+        and data.get("generationJobStatus") == job.status
+    ):
+        return False
+    data.update(
+        {
+            "reply": reply,
+            "pending": False,
+            "failed": job.status == "failed",
+            "generationJobId": job.id,
+            "generationJobStatus": job.status,
+        }
+    )
     assistant.content = reply
     assistant.content_data = data
     if job.status == "succeeded":

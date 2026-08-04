@@ -26,6 +26,11 @@ def message_id(chatroom_id: str, exchange_id: str, role: str) -> str:
 def touch_chatroom(room: Chatroom) -> None:
     """Move retention to the last time the chatroom was actually used."""
     now = datetime.now(timezone.utc)
+    if room.updated_at is not None:
+        previous = room.updated_at
+        if previous.tzinfo is None:
+            previous = previous.replace(tzinfo=timezone.utc)
+        now = max(now, previous + timedelta(microseconds=1))
     expires_at = now + timedelta(minutes=get_settings().data_retention_minutes)
     room.updated_at = now
     room.expires_at = expires_at
@@ -160,6 +165,7 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
                 "createdAt": exchange.createdAt,
                 "reply": exchange.reply,
                 "pending": exchange.pending,
+                "failed": exchange.failed,
                 "expectedImageCount": max(
                     existing_expected,
                     exchange.expectedImageCount,
@@ -206,6 +212,7 @@ def sync_chatroom(db: Session, snapshot: ChatroomSnapshot, user_id: str) -> Chat
                 "createdAt": exchange.createdAt,
                 "reply": exchange.reply,
                 "pending": exchange.pending,
+                "failed": exchange.failed,
                 "displayAsset": exchange.displayAsset,
                 "expectedImage": existing_expected
                 or exchange.expectedImage
@@ -263,6 +270,7 @@ def chatroom_snapshot(db: Session, chatroom_id: str, user_id: str) -> ChatroomSn
         images = [record_to_dict(record) for record in image_records]
         user_data = user.content_data or {}
         assistant_data = assistant.content_data or {}
+        failed = bool(assistant_data.get("failed", False))
         if message_type == "generation":
             expected_image_count = int(
                 assistant_data.get("expectedImageCount", len(images))
@@ -278,8 +286,11 @@ def chatroom_snapshot(db: Session, chatroom_id: str, user_id: str) -> ChatroomSn
                     "reply": assistant_data.get("reply", assistant.content),
                     "images": images,
                     "pending": assistant_data.get("pending", False),
+                    "failed": failed,
                     "expectedImageCount": expected_image_count,
-                    "missingImageCount": max(expected_image_count - len(images), 0),
+                    "missingImageCount": (
+                        0 if failed else max(expected_image_count - len(images), 0)
+                    ),
                 }
             )
         else:
@@ -295,9 +306,10 @@ def chatroom_snapshot(db: Session, chatroom_id: str, user_id: str) -> ChatroomSn
                     "reply": assistant_data.get("reply", assistant.content),
                     "image": images[0] if images else None,
                     "pending": assistant_data.get("pending", False),
+                    "failed": failed,
                     "displayAsset": assistant_data.get("displayAsset", "motif"),
                     "expectedImage": expected_image,
-                    "imageExpired": expected_image and not images,
+                    "imageExpired": expected_image and not images and not failed,
                 }
             )
     return ChatroomSnapshot(

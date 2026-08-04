@@ -242,6 +242,48 @@ def test_chatroom_marks_missing_generated_images_as_expired() -> None:
         assert exchange.missingImageCount == 1
 
 
+def test_failed_exchanges_do_not_render_missing_images_as_expired() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as db:
+        db.add(User(id=USER_ID, username="store"))
+        db.commit()
+        snapshot = ChatroomSnapshot.model_validate(
+            {
+                "id": "chat-failed-images",
+                "title": "failed",
+                "generationExchanges": [
+                    {
+                        "id": "generation-failed",
+                        "reply": "生成失敗",
+                        "pending": False,
+                        "failed": True,
+                        "expectedImageCount": 4,
+                    }
+                ],
+                "revisionExchanges": [
+                    {
+                        "id": "revision-failed",
+                        "user": "修改",
+                        "reply": "修改失敗，請重新送出要求。",
+                        "pending": False,
+                        "failed": True,
+                        "expectedImage": True,
+                    }
+                ],
+            }
+        )
+
+        sync_chatroom(db, snapshot, USER_ID)
+        restored = chatroom_snapshot(db, "chat-failed-images", USER_ID)
+
+        generation = restored.generationExchanges[0]
+        assert generation.failed is True
+        assert generation.missingImageCount == 0
+        revision = restored.revisionExchanges[0]
+        assert revision.failed is True
+        assert revision.imageExpired is False
+
+
 def test_revision_display_asset_is_persisted() -> None:
     engine = sqlite_engine()
     with Session(engine) as db:

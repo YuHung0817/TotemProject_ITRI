@@ -31,7 +31,7 @@ const products = [
   "托特包","帆布袋","束口袋","午餐袋","飲料提袋","環形鑰匙圈","台灣高中生側背書包","貝殼零錢包","圖騰織帶手機掛繩",
 ];
 const productReferenceUrl = (product:string) =>
-  `${API}/images/product-references/${encodeURIComponent(product)}`;
+  `${API}/images/product-references/${encodeURIComponent(product)}?v=2`;
 const designedCarrierCards:Record<string,string> = {
   "托特包":"/carrier-cards/tote-bag.svg",
   "帆布袋":"/carrier-cards/canvas-bag.svg",
@@ -67,8 +67,8 @@ const elementImages: Record<string, string> = {
   菱形: "/elements/botton＿菱形.svg",
   射耳祭: "/elements/botton＿射耳祭.svg",
 };
-type RevisionExchange = { id:string; createdAt?:number; user:string; sourceImage:string; reply:string; image?:ImageRecord; pending:boolean; expectedImage?:boolean; imageExpired?:boolean; displayAsset?:"motif"|"preview" };
-type GenerationExchange = { id:string; createdAt?:number; prompt:string; elements:string[]; colors?:ColorTag[]; carrier?:string|null; reply:string; images:ImageRecord[]; pending:boolean; hideUserMessage?:boolean; expectedImageCount?:number; missingImageCount?:number };
+type RevisionExchange = { id:string; createdAt?:number; user:string; sourceImage:string; reply:string; image?:ImageRecord; pending:boolean; failed?:boolean; expectedImage?:boolean; imageExpired?:boolean; displayAsset?:"motif"|"preview" };
+type GenerationExchange = { id:string; createdAt?:number; prompt:string; elements:string[]; colors?:ColorTag[]; carrier?:string|null; reply:string; images:ImageRecord[]; pending:boolean; failed?:boolean; hideUserMessage?:boolean; expectedImageCount?:number; missingImageCount?:number };
 type StoredChat = { id:string; title:string; expires_at?:string; revisionExchanges:RevisionExchange[]; generationExchanges:GenerationExchange[] };
 type RevisionMode = "elements" | "palette" | "same" | "product";
 const detailViews:AssetType[] = ["motif","preview","chart"];
@@ -198,6 +198,14 @@ async function requestImageGeneration(payload:GenerateRequest, idempotencyKey:st
       body:JSON.stringify(payload),
     });
   }
+  if (response.status >= 500) {
+    await wait(1000);
+    response = await fetch(`${API}/images/generate`, {
+      method:"POST",
+      headers,
+      body:JSON.stringify(payload),
+    });
+  }
   const data = await readResponse(response);
   if (response.status === 409 && data.detail?.code === "generation_in_progress") {
     return waitForGenerationJob(data.detail.job_id);
@@ -221,6 +229,10 @@ async function requestProtectedImage(url:string, options:RequestInit = {}, chatr
   try {
     response = await send();
   } catch {
+    await wait(1000);
+    response = await send();
+  }
+  if (response.status >= 500) {
     await wait(1000);
     response = await send();
   }
@@ -1370,13 +1382,13 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
         } else {
           data = await requestProtectedImage(`${API}/images/${target.id}/regenerate`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({instruction:revisionInstruction,mode:revisionMode,preview_mode:sourceAsset==="preview"?"template":"current"}) }, chatId ?? undefined, exchangeId);
         }
-        const completed:Partial<RevisionExchange> = {reply:displaysProduct ? "新的商品圖已完成。" : "已依照你的要求產生新的圖騰。",image:data,pending:false};
+        const completed:Partial<RevisionExchange> = {reply:displaysProduct ? "新的商品圖已完成。" : "已依照你的要求產生新的圖騰。",image:data,pending:false,failed:false};
         setRevisionExchanges(current => current.map(exchange => exchange.id === exchangeId ? {...exchange,...completed} : exchange));
         if (chatId) patchStoredRevision(chatId, exchangeId, completed);
       } catch (error) {
         const message = userFacingMessage(error,"修改失敗，請稍後再試。");
-        setRevisionExchanges(current => current.map(exchange => exchange.id === exchangeId ? {...exchange,reply:message,pending:false} : exchange));
-        if (chatId) patchStoredRevision(chatId, exchangeId, {reply:message,pending:false});
+        setRevisionExchanges(current => current.map(exchange => exchange.id === exchangeId ? {...exchange,reply:message,pending:false,failed:true,imageExpired:false} : exchange));
+        if (chatId) patchStoredRevision(chatId, exchangeId, {reply:message,pending:false,failed:true,imageExpired:false});
       } finally { setBusy(false); }
       return;
     }
@@ -1435,8 +1447,8 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
           // Keep the original request error when reconciliation also cannot reach the server.
         }
         const message = userFacingMessage(error,"圖片生成失敗，請稍後再試。");
-        setGenerationExchanges(current => current.map(exchange => exchange.id === exchangeId ? {...exchange,reply:message,pending:false} : exchange));
-        patchStoredGeneration(chatId, exchangeId, {reply:message,pending:false});
+        setGenerationExchanges(current => current.map(exchange => exchange.id === exchangeId ? {...exchange,reply:message,pending:false,failed:true,missingImageCount:0} : exchange));
+        patchStoredGeneration(chatId, exchangeId, {reply:message,pending:false,failed:true,missingImageCount:0});
       } finally { setBusy(false); }
       return;
     }
@@ -1471,7 +1483,7 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
         chat?.scrollTo({top:chat.scrollHeight,behavior:"smooth"});
       });
     } catch (error) {
-      const failed:Partial<GenerationExchange>={reply:userFacingMessage(error,"重新生成失敗，請稍後再試。"),pending:false};
+      const failed:Partial<GenerationExchange>={reply:userFacingMessage(error,"重新生成失敗，請稍後再試。"),pending:false,failed:true,missingImageCount:0};
       setGenerationExchanges(current=>current.map(item=>item.id===exchangeId?{...item,...failed}:item));
       patchStoredGeneration(chatId,exchangeId,failed);
     } finally { setBusy(false); }
@@ -1546,8 +1558,8 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
     } catch (error) {
       const message=userFacingMessage(error,"商品圖生成失敗，請稍後再試。");
       setStatus(message);
-      setRevisionExchanges(current=>current.map(exchange=>exchange.id===exchangeId?{...exchange,reply:message,pending:false}:exchange));
-      if(chatId)patchStoredRevision(chatId,exchangeId,{reply:message,pending:false});
+      setRevisionExchanges(current=>current.map(exchange=>exchange.id===exchangeId?{...exchange,reply:message,pending:false,failed:true,imageExpired:false}:exchange));
+      if(chatId)patchStoredRevision(chatId,exchangeId,{reply:message,pending:false,failed:true,imageExpired:false});
     } finally {
       setPreviewGenerationCount(count=>Math.max(0,count-1));
     }
@@ -1617,10 +1629,10 @@ export function ImageGeneratorPage({onLogout}:{onLogout:()=>void|Promise<void>})
         {!chatLoading && conversationStarted && <div className="chat-thread">
           {timelineExchanges.map(item => item.kind === "revision" ? <div className="revision-exchange" key={item.exchange.id}>
             <div className="message user-message revision-user-message"><button type="button" className={`revision-source-link ${item.exchange.displayAsset === "preview" ? "product-source" : "motif-source"}`} onClick={()=>scrollToSourceImage(item.exchange.sourceImage)} aria-label="捲動到這次修改使用的來源圖片"><ExpiringSourceImage src={`${SERVER}${item.exchange.sourceImage}`} alt={item.exchange.displayAsset === "preview" ? "這次要求修改的原商品圖" : "這次要求修改的原圖騰"}/></button><p>{item.exchange.user}</p></div>
-            <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.image || item.exchange.imageExpired) && <div className="chat-results"><div className="gallery">{item.exchange.image ? <ImageCard image={item.exchange.image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} generateCarrierPreview={product=>generateCarrierPreview(item.exchange.image!,product)} generationBlocked={generationBusy} onPreviewGenerationChange={active=>setPreviewGenerationCount(count=>Math.max(0,count+(active?1:-1)))} initialAsset={item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖") ? "preview" : "motif"}/> : item.exchange.imageExpired ? <ExpiredImagePlaceholder showingPreview={item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖")}/> : <div className={`generation-placeholder ${item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖") ? "showing-preview" : ""}`} aria-hidden="true"/>}</div></div>}</div>
+            <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{!item.exchange.failed && (item.exchange.pending || item.exchange.image || item.exchange.imageExpired) && <div className="chat-results"><div className="gallery">{item.exchange.image ? <ImageCard image={item.exchange.image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} generateCarrierPreview={product=>generateCarrierPreview(item.exchange.image!,product)} generationBlocked={generationBusy} onPreviewGenerationChange={active=>setPreviewGenerationCount(count=>Math.max(0,count+(active?1:-1)))} initialAsset={item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖") ? "preview" : "motif"}/> : item.exchange.imageExpired ? <ExpiredImagePlaceholder showingPreview={item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖")}/> : <div className={`generation-placeholder ${item.exchange.displayAsset === "preview" || item.exchange.user.startsWith("更換商品圖") ? "showing-preview" : ""}`} aria-hidden="true"/>}</div></div>}</div>
           </div> : <div className="revision-exchange" key={item.exchange.id}>
             {!item.exchange.hideUserMessage && <div className="message user-message">{(item.exchange.elements.length > 0 || (item.exchange.colors?.length??0) > 0 || item.exchange.carrier) && <div className="message-tags">{item.exchange.elements.map(name => <span key={name}><ElementTagIcon name={name}/>{name}</span>)}{(item.exchange.colors??[]).map(color => <span className="color-message-tag" key={color.name}><i style={{backgroundColor:`rgb(${color.rgb.join(",")})`}}/>{color.name}</span>)}{item.exchange.carrier&&<span className="carrier-message-tag"><CarrierIcon/>{item.exchange.carrier}</span>}</div>}{item.exchange.prompt && <p>{item.exchange.prompt}</p>}</div>}
-            <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{(item.exchange.pending || item.exchange.images.length > 0 || (item.exchange.missingImageCount??0)>0) && <div className="chat-results"><div className="gallery generation-gallery">{item.exchange.images.map(image => <ImageCard image={image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} generateCarrierPreview={product=>generateCarrierPreview(image,product)} generationBlocked={generationBusy} onPreviewGenerationChange={active=>setPreviewGenerationCount(count=>Math.max(0,count+(active?1:-1)))} squareCard key={image.id}/>)}{item.exchange.pending && item.exchange.images.length===0 ? Array.from({length:4},(_,index)=><div className="generation-placeholder" aria-hidden="true" key={`pending-${index}`}/>) : Array.from({length:item.exchange.missingImageCount??0},(_,index)=><ExpiredImagePlaceholder squareCard key={`expired-${index}`}/>)}</div>{item.exchange.images.length === 4 && <div className="generation-regenerate"><button type="button" disabled={generationBusy || item.exchange.pending} onClick={()=>void regenerateGeneration(item.exchange)} aria-label="依照原提示重新生成"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M14.2 11.9A7 7 0 1 1 15.5 6.6"/><path d="M15.5 3.5v3.1h-3.1"/></svg><span>重新生成</span></button></div>}</div>}</div>
+            <div className={`message ai-message ${item.exchange.pending ? "thinking" : ""}`}><div className="ai-mark">AI</div><p>{item.exchange.reply}</p>{!item.exchange.failed && (item.exchange.pending || item.exchange.images.length > 0 || (item.exchange.missingImageCount??0)>0) && <div className="chat-results"><div className="gallery generation-gallery">{item.exchange.images.map(image => <ImageCard image={image} updateImage={updateImage} setStatus={setStatus} askRegenerate={startRevision} generateCarrierPreview={product=>generateCarrierPreview(image,product)} generationBlocked={generationBusy} onPreviewGenerationChange={active=>setPreviewGenerationCount(count=>Math.max(0,count+(active?1:-1)))} squareCard key={image.id}/>)}{item.exchange.pending && item.exchange.images.length===0 ? Array.from({length:4},(_,index)=><div className="generation-placeholder" aria-hidden="true" key={`pending-${index}`}/>) : Array.from({length:item.exchange.missingImageCount??0},(_,index)=><ExpiredImagePlaceholder squareCard key={`expired-${index}`}/>)}</div>{item.exchange.images.length === 4 && <div className="generation-regenerate"><button type="button" disabled={generationBusy || item.exchange.pending} onClick={()=>void regenerateGeneration(item.exchange)} aria-label="依照原提示重新生成"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M14.2 11.9A7 7 0 1 1 15.5 6.6"/><path d="M15.5 3.5v3.1h-3.1"/></svg><span>重新生成</span></button></div>}</div>}</div>
           </div>)}
         </div>}
         {!chatLoading && !conversationStarted && <div className={`hero-intro-tools ${introToolsAbsorbing?"tools-absorbing":""}`}>

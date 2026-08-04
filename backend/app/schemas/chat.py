@@ -18,6 +18,7 @@ class GenerationExchangeSnapshot(BaseModel):
     reply: str = ""
     images: list[ImageRecord] = Field(default_factory=list)
     pending: bool = False
+    failed: bool = False
     expectedImageCount: int = Field(default=0, ge=0)
     missingImageCount: int = Field(default=0, ge=0)
 
@@ -30,6 +31,7 @@ class RevisionExchangeSnapshot(BaseModel):
     reply: str = ""
     image: ImageRecord | None = None
     pending: bool = False
+    failed: bool = False
     expectedImage: bool = False
     imageExpired: bool = False
     displayAsset: Literal["motif", "preview"] = "motif"

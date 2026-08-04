@@ -10,7 +10,9 @@ from app.services.product_reference_service import (
     PRODUCT_REFERENCE_FILES,
     product_reference_path,
 )
-from app.services.product_preview import add_product_reference_instructions
+from app.services.product_preview import (
+    add_product_reference_instructions,
+)
 
 
 def test_product_reference_allows_requested_camera_view_to_change() -> None:
@@ -41,9 +43,56 @@ def test_target_reference_is_not_described_as_current_product() -> None:
         "BASE PROMPT", request, reference_role="target"
     )
 
-    assert "TARGET PRODUCT REFERENCE" in prompt
+    assert "DIRECT EDIT TARGET" in prompt
     assert "CURRENT PRODUCT PREVIEW" not in prompt
-    assert "target reference product" in prompt
+    assert "corner geometry" in prompt
+    assert "Do not regenerate, redesign, recolor, replace, or restyle" in prompt
+
+
+def test_school_shoulder_bag_uses_reference_instead_of_textual_redesign() -> None:
+    request = ProductPreviewRequest(product="台灣高中生側背書包")
+
+    prompt = build_product_mockup_prompt(request, 0)
+
+    assert (
+        "exact traditional Taiwanese high school student shoulder bag shown in Image A"
+        in prompt
+    )
+    assert "20 W x 15 H x 6 D" not in prompt
+    assert "width-to-height ratio near 4:3" not in prompt
+    assert "Cambridge satchel" not in prompt
+
+
+def test_school_bag_reference_instruction_limits_edit_to_front_flap() -> None:
+    request = ProductPreviewRequest(product="台灣高中生側背書包")
+
+    prompt = add_product_reference_instructions(
+        "BASE PROMPT", request, reference_role="target"
+    )
+
+    assert "Image A is the DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF SOURCE ONLY" in prompt
+    assert "Only modify the visible front-flap motif area" in prompt
+    assert "Do not alter any other part of the bag" in prompt
+    assert "FINAL OVERRIDING SQUARE-CORNER CHECK" not in prompt
+
+
+def test_phone_lanyard_always_uses_the_entire_strap_as_motif_band() -> None:
+    request = ProductPreviewRequest(
+        product="圖騰織帶手機掛繩",
+        placement="AI自動決定位置",
+    )
+
+    base_prompt = build_product_mockup_prompt(request, 0)
+    prompt = add_product_reference_instructions(
+        base_prompt, request, reference_role="target"
+    )
+
+    assert "replace the entire long textile strap" in prompt
+    assert "along the full length of the strap" in prompt
+    assert "existing long woven lanyard strap itself is the only edit area" in prompt
+    assert "Nothing may span across the empty center space" in prompt
+    assert "Do not add a patch, pouch, panel, bridge, banner, pocket, or rectangle" in prompt
 
 
 def test_only_current_product_preview_options_are_enabled() -> None:
@@ -80,6 +129,14 @@ def test_only_current_product_preview_options_are_enabled() -> None:
     }
     assert set(PRODUCT_REFERENCE_FILES) == set(PRODUCT_OPTIONS)
     assert all(product_reference_path(product) for product in PRODUCT_OPTIONS)
+
+
+def test_white_background_style_preserves_reference_product_color() -> None:
+    style = DISPLAY_STYLE_OPTIONS["白色商品＋白底"]
+
+    assert "Preserve the target product reference's exact product color" in style
+    assert "Use a white or warm-white product" not in style
+    assert "warm white or very light beige studio background" in style
 
 
 def test_every_placement_builds_a_complete_prompt() -> None:

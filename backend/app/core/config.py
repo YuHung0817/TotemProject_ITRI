@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     openai_api_key_parameter_name: str = ""
     aws_region: str = ""
     openai_image_model: str = "gpt-image-1"
+    openai_product_image_model: str = "gpt-image-1"
     openai_prompt_compiler_model: str = "gpt-5-mini"
     use_prompt_compiler: bool = True
     generation_hourly_limit: int = 100

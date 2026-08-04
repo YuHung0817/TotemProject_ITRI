@@ -236,7 +236,8 @@ Set-ExecutionPolicy -Scope Process Bypass
 | `CORS_ORIGINS` | 允許的前端來源，逗號分隔 | `http://localhost:5173` |
 | `VITE_API_BASE_URL` | 前端呼叫的 API URL；開發由 Vite proxy 轉送 | `/api/v1` |
 | `OPENAI_API_KEY` | OpenAI API key | 無，必填 |
-| `OPENAI_IMAGE_MODEL` | 圖片生成模型 | `gpt-image-1` |
+| `OPENAI_IMAGE_MODEL` | 一般圖騰與圖片編修模型 | `gpt-image-1` |
+| `OPENAI_PRODUCT_IMAGE_MODEL` | 商品照生成模型 | `gpt-image-1` |
 | `OPENAI_PROMPT_COMPILER_MODEL` | Prompt compiler 模型 | `gpt-5-mini` |
 | `USE_PROMPT_COMPILER` | 是否啟用 prompt compiler | `1` |
 | `GENERATION_HOURLY_LIMIT` | 每小時最多建立的生成工作數 | `100` |

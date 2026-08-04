@@ -23,19 +23,7 @@ PRODUCT_OPTIONS = {
     "飲料提袋": "reusable single-cup beverage carrier bag with a fabric main body wrapping the drink cup and a long narrow carrying handle",
     "環形鑰匙圈": "loop key fob with one folded strap, one metal rivet, and one silver split key ring",
     "台灣高中生側背書包": (
-        "a traditional Taiwanese high school student shoulder bag: a compact horizontal "
-        "rectangular fabric school satchel approximately 20 cm wide, 15 cm high, and 6 cm deep. "
-        "Use durable canvas or nylon fabric with a practical, inexpensive school-uniform-accessory "
-        "appearance from Taiwan in the 1990s or early 2000s. The body is boxy but slightly soft, "
-        "with subtly rounded corners, a flat bottom, and clearly visible left and right side "
-        "gussets. One large plain rectangular front flap covers most of the bag body and provides "
-        "a broad uninterrupted surface for the uploaded motif. Use one long adjustable dark nylon "
-        "webbing shoulder strap attached at the upper left and right sides, with one simple black "
-        "plastic length-adjustment buckle. Show the complete bag in a clean front or slight "
-        "three-quarter catalog view. This is a Taiwanese fabric student school satchel, not a "
-        "leather Cambridge satchel, messenger laptop bag, modern fashion crossbody purse, camera "
-        "bag, tote bag, handbag, backpack, or briefcase. No chain strap, short handles, luxury "
-        "hardware, multiple exterior pockets, fashion branding, or invented school name"
+        "the exact traditional Taiwanese high school student shoulder bag shown in Image A"
     ),
     "貝殼零錢包": (
         "small structured shell-shaped coin purse with a flat bottom, rounded dome top, "
@@ -253,8 +241,9 @@ PLACEMENT_OPTIONS = {
 
 DISPLAY_STYLE_OPTIONS = {
     "白色商品＋白底": (
-        "Use a white or warm-white product on a clean warm white or very light beige "
-        "studio background. Keep gentle shadows so the product edges remain readable."
+        "Preserve the target product reference's exact product color. Use a clean warm "
+        "white or very light beige studio background. Keep gentle shadows so the product "
+        "edges remain readable."
     ),
     "黑色商品＋白底": (
         "Use a black or deep charcoal product on a clean white, warm-white, or very "
@@ -300,6 +289,8 @@ def build_product_mockup_prompt(request: Any, variant_index: int) -> str:
     if request.product == "復古側背書包":
         product_text = PRODUCT_OPTIONS["台灣高中生側背書包"]
     placement_text = PLACEMENT_OPTIONS.get(request.placement, request.placement)
+    if request.product == "圖騰織帶手機掛繩":
+        placement_text = PLACEMENT_OPTIONS["圖騰取代整條織帶"]
     display_style_text = DISPLAY_STYLE_OPTIONS.get(
         request.display_style,
         request.display_style,
@@ -309,23 +300,7 @@ def build_product_mockup_prompt(request: Any, variant_index: int) -> str:
     placement_lock_text = ""
     product_lock_text = ""
     if request.product in {"台灣高中生側背書包", "復古側背書包"}:
-        product_lock_text = """
-STRICT TAIWANESE HIGH SCHOOL SHOULDER BAG SHAPE LOCK:
-
-- Use a landscape rectangular bag body measuring visually about 20 W x 15 H x 6 D.
-- Keep the body wider than it is tall, with a width-to-height ratio near 4:3.
-- Show a flat bottom, softly rounded top corners, and a clearly visible 6 cm side gusset.
-- The front must have one large plain rectangular flap covering most of the bag body.
-- Keep that flap broad, uninterrupted, and clearly visible for motif placement.
-- Use one long adjustable dark nylon-webbing shoulder strap attached at both upper sides.
-- Include one simple black plastic length-adjustment buckle on the strap.
-- The result must feel like a practical Taiwanese high-school uniform accessory from the
-  1990s or early 2000s, made from durable fabric rather than leather.
-- Do not generate a leather Cambridge satchel, laptop messenger bag, modern purse, camera
-  bag, envelope pouch, backpack, tote bag, phone pouch, chain bag, or luxury handbag.
-- Do not add short handles, chain straps, multiple exterior pockets, fashion branding,
-  an invented school name, luxury hardware, or decorative ornaments.
-""".strip()
+        product_lock_text = ""
         if request.placement == "翻蓋偏下方":
             product_lock_text += """
 
@@ -705,9 +680,9 @@ Forbidden appearance:
     return f"""
 You are a professional apparel and product mockup designer.
 
-The uploaded image is NOT a reference.
+Image B is not a product reference.
 
-The uploaded image is the FINAL artwork.
+Image B is the FINAL motif artwork.
 
 It is a finished embroidery / cross-stitch / woven motif that has already been approved.
 

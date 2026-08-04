@@ -74,7 +74,7 @@ from app.services.prompt_compiler import (
 
 router = APIRouter(prefix="/images")
 IMAGE_API_TIMEOUT_SECONDS = 300.0
-IMAGE_API_MAX_RETRIES = 2
+IMAGE_API_MAX_RETRIES = 0
 IdempotencyKey = Annotated[
     str,
     Header(alias="Idempotency-Key", min_length=16, max_length=100),
@@ -496,7 +496,7 @@ def product_reference_image(product: str) -> FileResponse:
     return FileResponse(
         path,
         media_type=media_type,
-        headers={"Cache-Control": "public, max-age=3600"},
+        headers={"Cache-Control": "no-store"},
     )
 
 
