@@ -510,7 +510,7 @@ html,body,#root { height:100%; overflow:hidden; }
 .recent-chats small { color:#999; font-size:12px; line-height:20px; }
 .recent-chats button { width:100%; padding:10px 8px; overflow:hidden; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; border:0; border-radius:10px; background:transparent; color:#50391C; text-align:left; font-size:14px; line-height:20px; }
 .recent-chats button > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.recent-chats button > small { color:#8a7c74; font-size:11px; line-height:20px; white-space:nowrap; }
+.recent-chats button > small { color:transparent; font-size:11px; line-height:20px; white-space:nowrap; }
 .recent-chats button:hover,.recent-chats button.active { background:rgba(255,255,255,.5); }
 .drawer-logout { position:fixed; right:max(18px,calc(50vw - 222px)); bottom:max(18px,env(safe-area-inset-bottom)); z-index:61; width:40px; height:40px; padding:0; display:grid; place-items:center; border:1px solid rgba(75,58,48,.22); border-radius:50%; background:rgba(255,255,255,.7); color:#50391C; opacity:1; pointer-events:auto; transition:opacity var(--motion-duration-short) var(--motion-ease-standard),transform var(--motion-duration-long) var(--motion-ease-standard); }
 .drawer-layer[data-motion="entering"] .drawer-logout,.drawer-layer[data-motion="exiting"] .drawer-logout { opacity:0; transform:translateX(calc(-1 * var(--motion-distance-medium))); pointer-events:none; }
