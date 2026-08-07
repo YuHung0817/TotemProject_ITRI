@@ -27,7 +27,7 @@ from app.services.image_processing import (
 from app.services.prompt_compiler import build_generation_prompt
 
 DEFAULT_MODEL = get_settings().openai_image_model
-DEFAULT_QUALITY = "high"
+DEFAULT_QUALITY = "medium"
 GENERATION_SIZE = "1536x1024"
 RECOLOR_CONFIDENCE_THRESHOLD = 0.91
 LOCAL_RECOLOR_TERMS = (

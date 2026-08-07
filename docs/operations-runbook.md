@@ -162,6 +162,19 @@ sudo journalctl --disk-usage
 圖片生成會保留至少 2 GiB 且至少 20% volume 空間（取較高者）；低於門檻時 API
 會在呼叫付費圖片服務前回傳 HTTP 507。
 
+### 3.4 圖片 timeout 與卡住的 generation job
+
+圖片 API 單次 timeout 為 300 秒，OpenAI SDK 的圖片請求不自動重試。瀏覽器或
+Nginx 若先回傳 `5xx`／`504`，前端會沿用同一個 `Idempotency-Key` 查回原
+generation job 並輪詢；不要用新 key 手動重送同一個動作，否則會被單帳號唯一
+active-job 限制擋下。
+
+只有後端 job 進入 `failed` 後，前端才應顯示正式失敗並允許重新送出。聊天室的失敗
+exchange 不應顯示圖片 placeholder 或「儲存期限已過」。若畫面長時間停在生成中，
+先檢查 API journal，再查 `generation_jobs.status`、`updated_at`、`error_message`
+與 `finished_at`；輪詢 job 時會將超過 `GENERATION_STALE_MINUTES` 的孤立 active
+job 標記為失敗。
+
 ## 4. 檢查與執行資料清理
 
 資料預設保留 14 天（`DATA_RETENTION_MINUTES=20160`）。timer 每天 03:30 執行，
