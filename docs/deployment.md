@@ -2,6 +2,8 @@
 
 建議使用 Ubuntu 24.04 LTS。Security Group 只公開 80、443；不要對外開放 22、8000。管理 EC2 使用 AWS Systems Manager Session Manager。
 
+本文件只說明正式 AWS EC2 環境。Windows 本機工具安裝、database migration、測試帳號與開發啟動方式請見 [本機開發環境](local-development.md)。本機與 EC2 的設定、database、圖片及帳號彼此獨立，不會自動同步。
+
 目前 production 使用 `https://safu-studio.com`，EC2 以 Nginx、systemd、SQLite 與獨立加密 EBS volume 運行。前端採手機優先響應式版面；部署後需以實機驗證不同螢幕寬度、登入、生成、切換聊天室、圖片顯示與下載。
 
 ## 第一次部署
@@ -77,25 +79,98 @@ sudo -u safu bash -c 'set -a; source /etc/safu/safu.env; set +a; cd /opt/safu/ba
 
 帳號只需在該 EC2 的 SQLite 初始化一次。日後更新程式不要重跑 `manage_user create`；本機測試帳號也不會自動複製到 EC2。
 
-## 日後更新
+## 從本機更新至 EC2
 
-完整的部署前備份、驗證、日誌、清理、密碼重設與 DB 結構說明，請見
-[管理者維運手冊](operations-runbook.md)。
+完整流程是「本機修改與驗證 → Git commit／push → EC2 pull／部署 → 正式環境驗收」。不要用檔案總管、SCP 或複製本機 database 的方式局部覆蓋正式主機。
+
+### 1. 在本機驗證修改
+
+```powershell
+Push-Location backend
+& ..\.venv\Scripts\python.exe -m pytest
+& ..\.venv\Scripts\python.exe -m ruff check .
+Pop-Location
+
+Push-Location frontend
+npm.cmd run build
+Pop-Location
+
+git status --short
+git diff --check
+```
+
+確認 `.env`、database、圖片、API key 或其他秘密都沒有進入 Git。接著只加入本次修改範圍內的檔案，建立 commit 並 push 到團隊使用的 branch：
+
+```powershell
+git add <本次修改的檔案>
+git commit -m "描述本次修改"
+git push
+```
+
+若團隊使用 Pull Request，必須先完成 review／CI 並合併至正式部署 branch，再繼續 EC2 步驟。不要把未驗證的個人 branch 直接部署至 production。
+
+### 2. 進入 EC2 並確認狀態
+
+使用 AWS Systems Manager Session Manager 進入 EC2：
 
 ```bash
-cd /opt/safu
-sudo git pull --ff-only
-sudo bash deploy/setup-ec2.sh
+sudo git -C /opt/safu status --short
+sudo git -C /opt/safu branch --show-current
+sudo git -C /opt/safu log -1 --oneline
 ```
+
+正式主機的 Git worktree 應為乾淨。若 `status --short` 有輸出，先停止部署並確認修改來源，不要用 reset 或 checkout 強制清除。
+
+### 3. Pull 並執行部署腳本
+
+```bash
+sudo git -C /opt/safu pull --ff-only
+sudo git -C /opt/safu log -1 --oneline
+sudo bash /opt/safu/deploy/setup-ec2.sh
+```
+
+`setup-ec2.sh` 會更新 Python／npm dependencies、執行 frontend production build、安裝 systemd／Nginx 設定並重啟服務。`safu-api.service` 啟動前會自動執行 `alembic upgrade head`，因此 EC2 不需另外手動建立 database table。
+
+一般程式更新不要再次執行 `app.manage_user create`。正式帳號只在該 EC2 database 第一次初始化時建立一次。
+
+### 4. 部署後技術驗收
+
+```bash
+sudo systemctl is-active safu-api nginx safu-cleanup.timer
+sudo systemctl --no-pager --full status safu-api
+sudo nginx -t
+curl -fsS https://safu-studio.com/api/v1/health
+sudo journalctl -u safu-api --since "10 minutes ago" --no-pager
+```
+
+接著用瀏覽器驗收：
+
+1. HTTPS 首頁可載入。
+2. 可以登入與登出。
+3. 聊天室與既有圖片可載入。
+4. 本次修改的功能正常。
+5. 若修改生成流程，再執行一次完整 AI 生成與結果下載。
+6. journal 與瀏覽器 response 沒有洩漏 Token、Cookie、Prompt 或內部錯誤。
+
+### 6. 部署失敗
+
+先保存狀態與 log：
+
+```bash
+sudo systemctl --no-pager --full status safu-api
+sudo journalctl -u safu-api -n 200 --no-pager
+sudo git -C /opt/safu log -5 --oneline
+```
+
+不要直接把舊 database 蓋回運作中的服務，也不要任意執行 `alembic downgrade`。程式碼與 schema migration 必須一起評估；詳細處理方式見 [管理者維運手冊](operations-runbook.md#24-部署失敗或需要回復)。
 
 ## 服務管理
 
-```bash
-sudo systemctl status safu-api
-sudo systemctl restart safu-api
-sudo journalctl -u safu-api -f
-sudo nginx -t
-```
+部署後的服務管理、日誌、磁碟、cleanup、密碼重設、database 查詢與每月檢查，統一以 [管理者維運手冊](operations-runbook.md) 為準。
+
+## EC2 到期資料清理
+
+正式資料預設保留 14 天，由 `safu-cleanup.timer` 定期啟動 `safu-cleanup.service`。部署腳本負責安裝與啟用 timer；部署後的檢查、dry-run、手動觸發與 log 查詢統一見 [維運手冊的資料清理章節](operations-runbook.md#4-檢查與執行資料清理)。Windows 本機的手動清理方式則見 [本機到期資料清理](local-development.md#9-到期資料清理)。兩個環境的 database 與圖片彼此獨立。
 
 網域註冊完成後，在 Route 53 將 `safu-studio.com` 的 A 記錄指向 Safu EC2 的 Elastic IP。確認 DNS 已生效後執行：
 
@@ -104,20 +179,4 @@ sudo certbot --nginx -d safu-studio.com --redirect
 sudo certbot renew --dry-run
 ```
 
-Certbot 會互動詢問憑證通知信箱與服務條款，不要將信箱或終端內容中的敏感資料貼到公開位置。正式環境應加入 CloudWatch logs、健康監控與告警，並確認 14 天清理 timer 正常執行。本專案目前採單一 EC2、SQLite 與本機圖片，不要求 RDS、S3 或資料備份。
-
-## 程式更新
-
-在本機完成測試、commit 與 push 後，於 EC2 的 Session Manager 執行：
-
-```bash
-sudo git -C /opt/safu pull --ff-only
-sudo bash /opt/safu/deploy/setup-ec2.sh
-```
-
-部署腳本會重建前端、更新後端套件及 systemd/Nginx 設定，並保留 Certbot 管理的 HTTPS 設定。更新後檢查：
-
-```bash
-sudo systemctl is-active safu-api nginx safu-cleanup.timer
-curl -fsS https://safu-studio.com/api/v1/health
-```
+Certbot 會互動詢問憑證通知信箱與服務條款，不要將信箱或終端內容中的敏感資料貼到公開位置。2026-08-11 已確認 14 天清理 timer、log retention 與磁碟容量保護正常；依目前單一商家、低流量及可接受延遲發現故障的條件，暫不建立 CloudWatch／SNS 主動告警。本專案採單一 EC2、SQLite 與本機圖片，不要求 RDS、S3 或資料備份。

@@ -4,6 +4,8 @@
 內的設定為準：單一 AWS EC2、Ubuntu、Nginx、systemd、FastAPI、React、SQLite，
 圖片與資料庫位於獨立資料目錄。若正式主機的路徑或網域已變更，請先同步更新本手冊。
 
+本手冊負責「EC2 已上線後」的日常操作與故障處理。第一次建立 EC2、正式環境變數、DNS／HTTPS，以及本機版本發布至 EC2 的完整順序，以 [EC2 部署文件](deployment.md) 為準。本手冊第 2 節保留部署時需要的維運檢查，作為主機端操作 runbook。
+
 ## 1. 先知道這些位置
 
 | 項目 | 正式環境位置或名稱 |
@@ -36,23 +38,8 @@ sudo git log -1 --oneline
 ```
 
 `git status --short` 應沒有輸出。若有不明的主機端修改，先停止，不要用 reset 或
-checkout 覆蓋；確認修改來源並備份。
-
-部署前建立 DB 備份。SQLite 正在運作時不要直接 `cp app.db`，改用 SQLite backup：
-
-```bash
-backup="/srv/safu-data/app-$(date +%Y%m%d-%H%M%S).db"
-sudo -u safu sqlite3 /srv/safu-data/app.db ".backup '$backup'"
-sudo -u safu test -s "$backup"
-echo "$backup"
-```
-
-如果找不到 `sqlite3`，先安裝：
-
-```bash
-sudo apt-get update
-sudo apt-get install -y sqlite3
-```
+checkout 覆蓋；先確認修改來源。依目前營運決策，正式 DB 與圖片不建立備份；部署或
+主機故障造成資料遺失時，以重新部署、migration 與重建帳號恢復服務。
 
 ### 2.2 執行部署
 
@@ -96,7 +83,7 @@ sudo git -C /opt/safu log -5 --oneline
 
 不要直接把舊 DB 蓋回仍在運作的服務，也不要任意執行 `alembic downgrade`。程式碼
 回復與 DB migration 必須一起評估。最安全的做法是先停止 API，確認要回復的 commit
-及備份檔，再由熟悉 migration 的開發者處理：
+及 migration 相容性，再由熟悉 migration 的開發者處理：
 
 ```bash
 sudo systemctl stop safu-api
@@ -284,6 +271,6 @@ sudo journalctl --disk-usage
 sudo certbot renew --dry-run
 ```
 
-另確認 EC2/EBS 狀態、HTTPS 到期日、SSM 可登入、Parameter Store 金鑰可讀，以及最近
-一次部署備份可以找到。此 repository 目前沒有自動異地 DB／圖片備份；若營運要求可
-復原歷史資料，需另行建立並定期演練備份還原流程。
+另確認 EC2/EBS 狀態、HTTPS 到期日、SSM 可登入、Parameter Store 金鑰可讀，並重新
+確認是否仍接受不備份及故障後重建的營運決策。若營運開始要求復原歷史資料，需另行
+建立異地備份並定期演練還原流程。
