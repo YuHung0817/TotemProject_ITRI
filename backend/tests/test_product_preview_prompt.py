@@ -77,6 +77,183 @@ def test_school_bag_reference_instruction_limits_edit_to_front_flap() -> None:
     assert "FINAL OVERRIDING SQUARE-CORNER CHECK" not in prompt
 
 
+def test_red_school_bag_uses_the_school_bag_edit_protection() -> None:
+    request = ProductPreviewRequest(
+        product="高中生紅色側背包",
+        placement="翻蓋偏下方",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact red Taiwanese high school student shoulder bag" in prompt
+    assert "Only modify the visible front-flap motif area" in prompt
+    assert "approximately 20% of that flap width" in prompt
+
+
+def test_black_school_bag_uses_the_school_bag_edit_protection() -> None:
+    request = ProductPreviewRequest(
+        product="高中生黑色側背包",
+        placement="翻蓋偏下方",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact black Taiwanese high school student shoulder bag" in prompt
+    assert "Only modify the visible front-flap motif area" in prompt
+    assert "approximately 20% of that flap width" in prompt
+
+
+def test_hongye_bag_only_replaces_existing_bottom_motif_band() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉少棒紅書包",
+        placement="置換下方圖騰",
+    )
+
+    base_prompt = build_product_mockup_prompt(request, 0)
+    prompt = add_product_reference_instructions(
+        base_prompt, request, reference_role="target"
+    )
+
+    assert "existing black-and-white horizontal geometric motif band" in prompt
+    assert "the only edit area" in prompt
+    assert 'all text including "紅葉少棒 1968"' in prompt
+    assert "Do not place the uploaded motif" in prompt
+    assert "Only modify the visible front-flap motif area" not in prompt
+
+
+def test_black_hongye_bag_preserves_its_own_product_details() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉少棒黑書包",
+        placement="置換下方圖騰",
+    )
+
+    base_prompt = build_product_mockup_prompt(request, 0)
+    prompt = add_product_reference_instructions(
+        base_prompt, request, reference_role="target"
+    )
+
+    assert "exact black Hongye youth baseball shoulder bag" in prompt
+    assert "black fabric, maple-leaf patch" in prompt
+    assert "the only edit area" in prompt
+    assert "red fabric" not in prompt
+
+
+def test_green_hongye_bag_only_replaces_its_bottom_motif_band() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉少棒綠書包",
+        placement="置換下方圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact green Hongye youth baseball shoulder bag" in prompt
+    assert "green fabric, yellow maple leaf" in prompt
+    assert "the only edit area" in prompt
+    assert "visible red front panel" not in prompt
+
+
+def test_hongye_coin_purse_replaces_only_its_two_side_bands() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉少棒黑色零錢包",
+        placement="置換兩側飾帶圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "two existing narrow colorful vertical decorative bands" in prompt
+    assert "the only edit areas" in prompt
+    assert 'Preserve the central red maple leaf' in prompt
+    assert '"1960", "UNINANG"' in prompt
+    assert "every surrounding white decorative symbol" in prompt
+    assert "Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF REFERENCE ONLY" in prompt
+    assert "scale, crop, simplify" in prompt
+    assert "rearrange them vertically" in prompt
+    assert "realistic woven fabric tape physically sewn into the pouch" in prompt
+    assert "Preserve the rest of the pouch exactly" in prompt
+    assert "outside the two side strips" in prompt
+
+
+def test_red_hongye_coin_purse_uses_the_same_two_side_band_rule() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉少棒紅色零錢包",
+        placement="置換兩側飾帶圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact red-and-black Hongye youth baseball rectangular coin purse" in prompt
+    assert "two existing narrow colorful vertical decorative bands" in prompt
+    assert "all black and red fabric exactly as shown" in prompt
+    assert 'Preserve the central red maple leaf' in prompt
+    assert '"1960", "UNINANG"' in prompt
+
+
+def test_white_hongye_shirt_only_replaces_both_cuff_bands() -> None:
+    request = ProductPreviewRequest(
+        product="白色紅葉少棒衣服",
+        placement="置換左右袖口圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF REFERENCE ONLY" in prompt
+    assert "left and right sleeve cuffs are the only edit areas" in prompt
+    assert "realistic woven fabric trim" in prompt
+    assert "into both cuffs" in prompt
+    assert "Preserve the rest of the shirt exactly" in prompt
+    assert '"HongYe", "1968"' in prompt
+    assert "outside the two sleeve-cuff bands" in prompt
+
+
+def test_black_hongye_shirt_only_replaces_its_lower_motif_band() -> None:
+    request = ProductPreviewRequest(
+        product="黑色紅葉少棒衣服",
+        placement="置換衣服下方圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF REFERENCE ONLY" in prompt
+    assert "wide horizontal" in prompt
+    assert "across the lower shirt front" in prompt
+    assert "the only edit area" in prompt
+    assert "Preserve the rest of the shirt exactly" in prompt
+    assert '"紅葉少棒"' in prompt
+    assert '"1968"' in prompt
+    assert "outside the original lower motif band" in prompt
+
+
 def test_phone_lanyard_always_uses_the_entire_strap_as_motif_band() -> None:
     request = ProductPreviewRequest(
         product="圖騰織帶手機掛繩",
@@ -95,22 +272,60 @@ def test_phone_lanyard_always_uses_the_entire_strap_as_motif_band() -> None:
     assert "Do not add a patch, pouch, panel, bridge, banner, pocket, or rectangle" in prompt
 
 
+def test_black_phone_lanyard_uses_the_same_full_strap_replacement_rule() -> None:
+    request = ProductPreviewRequest(
+        product="黑色手機掛繩",
+        placement="圖騰取代整條織帶",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact black adjustable dual-hook phone lanyard" in prompt
+    assert "existing long woven lanyard strap itself is the only edit area" in prompt
+    assert "Preserve the strap's original width, path, construction" in prompt
+
+
 def test_only_current_product_preview_options_are_enabled() -> None:
     assert set(PRODUCT_OPTIONS) == {
         "托特包",
+        "黑色托特包",
         "帆布袋",
+        "黑色帆布袋",
         "束口袋",
+        "黑色束口袋",
         "午餐袋",
+        "黑色午餐袋",
         "飲料提袋",
+        "黑色飲料袋",
         "環形鑰匙圈",
+        "黑色環形鑰匙圈",
         "台灣高中生側背書包",
+        "高中生紅色側背包",
+        "高中生黑色側背包",
+        "紅葉少棒紅書包",
+        "紅葉少棒黑書包",
+        "紅葉少棒綠書包",
         "貝殼零錢包",
+        "黑色貝殼零錢包",
+        "紅葉少棒黑色零錢包",
+        "紅葉少棒紅色零錢包",
+        "白色紅葉少棒衣服",
+        "黑色紅葉少棒衣服",
         "圖騰織帶手機掛繩",
+        "黑色手機掛繩",
     }
     assert set(PLACEMENT_OPTIONS) == {
         "AI自動決定位置",
         "袋子中央",
         "翻蓋偏下方",
+        "置換下方圖騰",
+        "置換兩側飾帶圖騰",
+        "置換左右袖口圖騰",
+        "置換衣服下方圖騰",
         "肩帶",
         "提袋處",
         "提袋",

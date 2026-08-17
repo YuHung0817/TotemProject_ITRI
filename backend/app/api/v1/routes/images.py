@@ -488,11 +488,12 @@ def product_reference_image(product: str) -> FileResponse:
         raise HTTPException(404, "Product reference image not found")
     with path.open("rb") as image_file:
         header = image_file.read(12)
-    media_type = (
-        "image/webp"
-        if header.startswith(b"RIFF") and header[8:12] == b"WEBP"
-        else "image/jpeg"
-    )
+    if header.startswith(b"RIFF") and header[8:12] == b"WEBP":
+        media_type = "image/webp"
+    elif header.startswith(b"\x89PNG\r\n\x1a\n"):
+        media_type = "image/png"
+    else:
+        media_type = "image/jpeg"
     return FileResponse(
         path,
         media_type=media_type,

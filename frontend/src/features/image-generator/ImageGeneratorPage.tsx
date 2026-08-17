@@ -28,20 +28,37 @@ const colorChoices:ColorTag[] = [
 const products = [
   // "棒球帽","漁夫帽","圓領T-shirt","短版T-shirt","Polo衫","帽T",
   // "拉鍊帽T","飛行外套","牛仔外套","教練外套","背心",
-  "托特包","帆布袋","束口袋","午餐袋","飲料提袋","環形鑰匙圈","台灣高中生側背書包","貝殼零錢包","圖騰織帶手機掛繩",
+  "托特包","黑色托特包","帆布袋","黑色帆布袋","束口袋","黑色束口袋","午餐袋","黑色午餐袋","飲料提袋","黑色飲料袋","環形鑰匙圈","黑色環形鑰匙圈","台灣高中生側背書包","高中生紅色側背包","高中生黑色側背包","紅葉少棒紅書包","紅葉少棒黑書包","紅葉少棒綠書包","貝殼零錢包","黑色貝殼零錢包","紅葉少棒黑色零錢包","紅葉少棒紅色零錢包","白色紅葉少棒衣服","黑色紅葉少棒衣服","圖騰織帶手機掛繩","黑色手機掛繩",
 ];
 const productReferenceUrl = (product:string) =>
   `${API}/images/product-references/${encodeURIComponent(product)}?v=2`;
 const designedCarrierCards:Record<string,string> = {
   "托特包":"/carrier-cards/tote-bag.svg",
+  "黑色托特包":"/carrier-cards/black-tote-bag.svg",
   "帆布袋":"/carrier-cards/canvas-bag.svg",
+  "黑色帆布袋":"/carrier-cards/black-canvas-bag.svg",
   "束口袋":"/carrier-cards/drawstring-bag.svg",
+  "黑色束口袋":"/carrier-cards/black-drawstring-bag.svg",
   "午餐袋":"/carrier-cards/lunch-bag.svg",
+  "黑色午餐袋":"/carrier-cards/black-lunch-bag.svg",
   "飲料提袋":"/carrier-cards/beverage-carrier.svg",
+  "黑色飲料袋":"/carrier-cards/black-beverage-carrier.svg",
   "環形鑰匙圈":"/carrier-cards/loop-key-fob.svg",
+  "黑色環形鑰匙圈":"/carrier-cards/black-loop-key-fob.svg",
   "台灣高中生側背書包":"/carrier-cards/taiwan-school-shoulder-bag.svg",
+  "高中生紅色側背包":"/carrier-cards/red-school-shoulder-bag.svg",
+  "高中生黑色側背包":"/carrier-cards/black-school-shoulder-bag.svg",
+  "紅葉少棒紅書包":"/carrier-cards/hongye-baseball-bag.svg",
+  "紅葉少棒黑書包":"/carrier-cards/hongye-black-baseball-bag.svg",
+  "紅葉少棒綠書包":"/carrier-cards/hongye-green-baseball-bag.svg",
   "貝殼零錢包":"/carrier-cards/shell-coin-purse.svg",
+  "黑色貝殼零錢包":"/carrier-cards/black-shell-coin-purse.svg",
+  "紅葉少棒黑色零錢包":"/carrier-cards/hongye-black-coin-purse.svg",
+  "紅葉少棒紅色零錢包":"/carrier-cards/hongye-red-coin-purse.svg",
+  "白色紅葉少棒衣服":"/carrier-cards/white-hongye-shirt.svg",
+  "黑色紅葉少棒衣服":"/carrier-cards/black-hongye-shirt.svg",
   "圖騰織帶手機掛繩":"/carrier-cards/phone-lanyard.svg",
+  "黑色手機掛繩":"/carrier-cards/black-phone-lanyard.svg",
 };
 const elementNames = ["山豬","山羌","山羊","水鹿","台灣黑熊","月亮","太陽","山脈","河川","鳥","小米","菖蒲","葫蘆","玉米","稻米","樹豆","茅草","星星","菱形","射耳祭"];
 const fallbackElementImage = "/elements/botton＿tent.png";
@@ -260,6 +277,7 @@ const SimilarIcon = () => <svg className="similar-icon" viewBox="0 0 36 36" aria
 const MenuIcon = () => <svg className="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg>;
 const BackIcon = () => <svg className="back-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>;
 const BookmarkIcon = ({filled=false}:{filled?:boolean}) => <svg className="bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path className={filled?"filled":""} d="M6.5 3.5h11v17l-5.5-3.6-5.5 3.6z"/></svg>;
+const DownloadIcon = () => <svg className="download-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M5 15v2.5A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5V15"/></svg>;
 const NewChatIcon = () => <svg className="new-chat-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h9l4 4v4.2M14 3.5v4h4M12.5 19.5H5V3.5"/><path d="m11.5 18.5 6.7-6.7 2 2-6.7 6.7-2.7.7z"/></svg>;
 const EditCollectionsIcon = () => <svg className="edit-collections-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m6 7 1 13h10l1-13"/><path d="M10 11v5M14 11v5"/></svg>;
 const LogoutIcon = () => <svg className="logout-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 8V5.5A2.5 2.5 0 0 0 11.5 3h-6A2.5 2.5 0 0 0 3 5.5v13A2.5 2.5 0 0 0 5.5 21h6a2.5 2.5 0 0 0 2.5-2.5V16"/><path d="M9 12h12m-4-4 4 4-4 4"/></svg>;
@@ -636,6 +654,7 @@ function GalleryAssetCard({ asset, onChanged }: {
   onChanged: (recordId:string, assetType:AssetType, changes:Partial<Pick<GalleryAsset,"saved"|"favorite"|"collection_ids">>) => void;
 }) {
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [viewerHeroTransitioning,setViewerHeroTransitioning]=useState(false);
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
@@ -734,6 +753,27 @@ function GalleryAssetCard({ asset, onChanged }: {
     const point=[...pointersRef.current.values()][0]; dragRef.current=point ?? null;
   }
 
+  async function downloadAsset() {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const response=await fetch(`${SERVER}${asset.url}`);
+      if (!response.ok) throw new Error("download_failed");
+      const blob=await response.blob();
+      const extension=blob.type.includes("jpeg")?"jpg":blob.type.includes("webp")?"webp":"png";
+      const objectUrl=URL.createObjectURL(blob);
+      const link=document.createElement("a");
+      link.href=objectUrl;
+      link.download=`totem-${asset.asset_type}-${asset.record_id}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(objectUrl),1000);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   async function openCollectionPicker() {
     const response=await fetch(`${API}/images/collections`);
     const data:CollectionRecord[]=await readResponse(response);
@@ -780,6 +820,7 @@ function GalleryAssetCard({ asset, onChanged }: {
     </div>
     {viewerOpen && createPortal(<div className="asset-viewer" role="dialog" aria-modal="true" aria-label="全螢幕圖片" onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onWheel={event => {event.preventDefault();setScale(scaleRef.current*(event.deltaY<0?1.15:.87));}}>
       <div className="asset-viewer-toolbar" onPointerDown={event => event.stopPropagation()}><button type="button" className="close-image-button" onClick={closeViewer} aria-label="關閉圖片檢視器"><CloseButtonIcon /></button><div><button type="button" className={`asset-viewer-collection-button ${selectedCollectionIds.length > 0 || asset.favorite ? "active" : ""}`} onClick={openCollectionPicker} aria-label={selectedCollectionIds.length > 0 || asset.favorite ? "管理收藏資料夾" : "收藏這張圖片"}><BookmarkIcon filled={selectedCollectionIds.length > 0 || asset.favorite}/></button></div></div>
+      <button type="button" className="asset-viewer-download-button" onPointerDown={event=>event.stopPropagation()} onClick={()=>void downloadAsset()} disabled={downloading} aria-label={downloading?"正在下載圖片":"下載這張圖片"}><DownloadIcon /></button>
       <img src={`${SERVER}${asset.url}`} alt={assetLabels[asset.asset_type]} draggable={false} style={{transform:`translate(${viewerOffset.x}px,${viewerOffset.y}px) scale(${viewerScale})`,viewTransitionName:viewerHeroTransitioning?"active-zoom-hero":undefined}}/>
       <ExpiryLabel expiresAt={asset.expires_at}/>
     </div>,document.body)}

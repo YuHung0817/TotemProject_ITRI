@@ -14,25 +14,62 @@ PRODUCT_OPTIONS = {
     # "教練外套": "coach jacket",
     # "背心": "sleeveless open-front vest with a V-shaped neckline",
     "托特包": "canvas tote bag",
+    "黑色托特包": "the exact black structured tote bag shown in Image A",
     "帆布袋": (
         "simple lightweight flat canvas shopping bag with a tall rectangular body, "
         "two long narrow fabric handles, an open top, and no rigid structure"
     ),
+    "黑色帆布袋": "the exact black canvas shopping bag shown in Image A",
     "束口袋": "drawstring bag",
+    "黑色束口袋": "the exact black drawstring bag shown in Image A",
     "午餐袋": "insulated lunch bag with a structured fabric body, zippered top opening, and carrying handles",
+    "黑色午餐袋": "the exact black insulated lunch bag shown in Image A",
     "飲料提袋": "reusable single-cup beverage carrier bag with a fabric main body wrapping the drink cup and a long narrow carrying handle",
+    "黑色飲料袋": "the exact black single-cup beverage carrier shown in Image A",
     "環形鑰匙圈": "loop key fob with one folded strap, one metal rivet, and one silver split key ring",
+    "黑色環形鑰匙圈": "the exact black woven loop key fob shown in Image A",
     "台灣高中生側背書包": (
         "the exact traditional Taiwanese high school student shoulder bag shown in Image A"
+    ),
+    "高中生紅色側背包": (
+        "the exact red Taiwanese high school student shoulder bag shown in Image A"
+    ),
+    "高中生黑色側背包": (
+        "the exact black Taiwanese high school student shoulder bag shown in Image A"
+    ),
+    "紅葉少棒紅書包": (
+        "the exact red Hongye youth baseball shoulder bag shown in Image A"
+    ),
+    "紅葉少棒黑書包": (
+        "the exact black Hongye youth baseball shoulder bag shown in Image A"
+    ),
+    "紅葉少棒綠書包": (
+        "the exact green Hongye youth baseball shoulder bag shown in Image A"
     ),
     "貝殼零錢包": (
         "small structured shell-shaped coin purse with a flat bottom, rounded dome top, "
         "slightly gusseted fabric body, and a zipper following the curved top edge"
     ),
+    "黑色貝殼零錢包": (
+        "the exact black shell-shaped coin purse shown in Image A"
+    ),
+    "紅葉少棒黑色零錢包": (
+        "the exact black Hongye youth baseball rectangular coin purse shown in Image A"
+    ),
+    "紅葉少棒紅色零錢包": (
+        "the exact red-and-black Hongye youth baseball rectangular coin purse shown in Image A"
+    ),
+    "白色紅葉少棒衣服": (
+        "the exact white Hongye youth baseball short-sleeve shirt shown in Image A"
+    ),
+    "黑色紅葉少棒衣服": (
+        "the exact black Hongye youth baseball short-sleeve shirt shown in Image A"
+    ),
     "圖騰織帶手機掛繩": (
         "adjustable crossbody phone lanyard made from one long flat woven textile strap, "
         "with a strap adjuster, metal swivel clasp, connecting ring, and phone tether tab"
     ),
+    "黑色手機掛繩": "the exact black adjustable dual-hook phone lanyard shown in Image A",
 }
 
 
@@ -50,6 +87,22 @@ PLACEMENT_OPTIONS = {
         "on the lower portion of the visible front flap of the Taiwanese high school shoulder "
         "bag. Center the motif horizontally, but place it vertically below the flap's midpoint, "
         "around the lower third of the flap. Keep it clear of the bottom edge and all seams"
+    ),
+    "置換下方圖騰": (
+        "replace only the existing black-and-white horizontal motif band at the very bottom "
+        "of the Hongye youth baseball bag's visible front panel with the uploaded motif"
+    ),
+    "置換兩側飾帶圖騰": (
+        "replace only the two existing colorful vertical side bands on the coin purse's "
+        "visible black woven front panel with the uploaded motif"
+    ),
+    "置換左右袖口圖騰": (
+        "replace only the existing decorative motif bands at the left and right sleeve cuffs "
+        "with the uploaded motif"
+    ),
+    "置換衣服下方圖騰": (
+        "replace only the existing wide horizontal motif band across the lower front of "
+        "the shirt with the uploaded motif"
     ),
     "提袋處": "on the visible front-facing carrying handle / shoulder strap of the tote bag. Apply the "
     "motif as one continuous textile strip running along the direction of the handle. The "
@@ -272,14 +325,31 @@ DISPLAY_STYLE_OPTIONS = {
 # Only placements that make sense for each currently enabled product.
 PRODUCT_PLACEMENT_OPTIONS = {
     "托特包": ["AI自動決定位置", "袋子中央", "提袋處"],
+    "黑色托特包": ["AI自動決定位置", "袋子中央", "提袋處"],
     "帆布袋": ["AI自動決定位置", "袋子中央", "提袋處"],
+    "黑色帆布袋": ["AI自動決定位置", "袋子中央", "提袋處"],
     "束口袋": ["AI自動決定位置", "袋子中央"],
+    "黑色束口袋": ["AI自動決定位置", "袋子中央"],
     "午餐袋": ["AI自動決定位置", "袋子中央", "提袋"],
+    "黑色午餐袋": ["AI自動決定位置", "袋子中央", "提袋"],
     "飲料提袋": ["袋身／杯套本體", "提把／提帶"],
+    "黑色飲料袋": ["袋身／杯套本體", "提把／提帶"],
     "環形鑰匙圈": ["圖騰取代皮革帶"],
+    "黑色環形鑰匙圈": ["圖騰取代皮革帶"],
     "台灣高中生側背書包": ["AI自動決定位置", "翻蓋偏下方", "肩帶"],
+    "高中生紅色側背包": ["AI自動決定位置", "翻蓋偏下方", "肩帶"],
+    "高中生黑色側背包": ["AI自動決定位置", "翻蓋偏下方", "肩帶"],
+    "紅葉少棒紅書包": ["置換下方圖騰"],
+    "紅葉少棒黑書包": ["置換下方圖騰"],
+    "紅葉少棒綠書包": ["置換下方圖騰"],
     "貝殼零錢包": ["AI自動決定位置", "袋身中央直條"],
+    "黑色貝殼零錢包": ["AI自動決定位置", "袋身中央直條"],
+    "紅葉少棒黑色零錢包": ["置換兩側飾帶圖騰"],
+    "紅葉少棒紅色零錢包": ["置換兩側飾帶圖騰"],
+    "白色紅葉少棒衣服": ["置換左右袖口圖騰"],
+    "黑色紅葉少棒衣服": ["置換衣服下方圖騰"],
     "圖騰織帶手機掛繩": ["圖騰取代整條織帶"],
+    "黑色手機掛繩": ["圖騰取代整條織帶"],
 }
 
 
@@ -289,7 +359,7 @@ def build_product_mockup_prompt(request: Any, variant_index: int) -> str:
     if request.product == "復古側背書包":
         product_text = PRODUCT_OPTIONS["台灣高中生側背書包"]
     placement_text = PLACEMENT_OPTIONS.get(request.placement, request.placement)
-    if request.product == "圖騰織帶手機掛繩":
+    if request.product in {"圖騰織帶手機掛繩", "黑色手機掛繩"}:
         placement_text = PLACEMENT_OPTIONS["圖騰取代整條織帶"]
     display_style_text = DISPLAY_STYLE_OPTIONS.get(
         request.display_style,
@@ -299,7 +369,7 @@ def build_product_mockup_prompt(request: Any, variant_index: int) -> str:
     user_text = request.preview_prompt.strip()
     placement_lock_text = ""
     product_lock_text = ""
-    if request.product in {"台灣高中生側背書包", "復古側背書包"}:
+    if request.product in {"台灣高中生側背書包", "高中生紅色側背包", "高中生黑色側背包", "復古側背書包"}:
         product_lock_text = ""
         if request.placement == "翻蓋偏下方":
             product_lock_text += """
@@ -314,6 +384,69 @@ STRICT LOWER-FLAP MOTIF POSITION AND SCALE:
 - Keep a clear fabric margin between the motif and the flap's bottom edge and seams.
 - Do not enlarge the motif beyond 20% of the flap width, especially not to 80%.
 - Do not fill most of the flap, turn it into an all-over print, or let it touch any flap edge or seam.
+""".rstrip()
+    if request.product in {"紅葉少棒紅書包", "紅葉少棒黑書包", "紅葉少棒綠書包"}:
+        preserved_details = {
+            "紅葉少棒紅書包": 'the red bag body, yellow maple leaf, and all text including "紅葉少棒 1968"',
+            "紅葉少棒黑書包": "the black bag body, maple-leaf patch, and all original Chinese text",
+            "紅葉少棒綠書包": 'the green bag body, yellow maple leaf, and all text including "紅葉少棒 1968"',
+        }[request.product]
+        product_lock_text = f"""
+
+STRICT HONGYE BAG BOTTOM-MOTIF REPLACEMENT LOCK:
+
+- Image A is the exact product and composition to preserve.
+- Locate the existing black-and-white horizontal geometric motif band at the very bottom of the visible front panel.
+- Replace that existing bottom band only with Image B, the uploaded motif.
+- Fit Image B into the same long horizontal band footprint, boundaries, width, height, fabric surface, folds, lighting, and perspective.
+- Preserve {preserved_details}, seams, edges, strap, buckle, rings, hardware, silhouette, camera angle, and background exactly as shown in Image A.
+- Do not place the uploaded motif above the original bottom band, on the text or maple leaf, on the strap, or anywhere else.
+- Do not retain, duplicate, or overlay the original black-and-white geometric design after replacement.
+""".rstrip()
+    if request.product in {"紅葉少棒黑色零錢包", "紅葉少棒紅色零錢包"}:
+        product_lock_text = """
+
+STRICT HONGYE COIN-PURSE TWO-SIDE-BAND REPLACEMENT LOCK:
+
+- Image A is the PRODUCT IMAGE, the DIRECT EDIT TARGET, and the main image to modify. Edit Image A in place; do not generate or redesign a different pouch.
+- Image B is the MOTIF REFERENCE ONLY. Use it only as the source design for the two replacement trim strips; never treat Image B as the product image, background, or overall composition.
+- The only edit areas are the two existing narrow colorful vertical decorative bands, one near the left edge and one near the right edge of the visible front panel.
+- Replace only the left and right vertical decorative trim strips. Show the uploaded motif on both strips, fitted to each strip's original narrow vertical footprint, width, height, fabric surface, lighting, and perspective.
+- Because Image B may be a wide horizontal design while the product strips are narrow and vertical, adapt it appropriately for this application: scale, crop, simplify, select recognizable motif components, repeat, and rearrange them vertically as needed. Preserve the motif's identity, key shapes, and colors while making it legible in both narrow strips.
+- Render both replacements as realistic woven fabric tape physically sewn into the pouch, with visible textile weave, stitched edges, natural thickness, surface integration, shadows, lighting, and perspective. Do not paste flat rectangular images or stickers onto the pouch.
+- Preserve the central red maple leaf, green leaf veins and stem, "1960", "UNINANG", and every surrounding white decorative symbol exactly as shown in Image A.
+- Preserve the rest of the pouch exactly: the black fabric panel, top and side panels and their original colors, zipper, zipper pull, piping, seams, rounded corners, bag dimensions, silhouette, camera angle, lighting, and background.
+- Do not place the uploaded motif in the central artwork area, on the zipper, piping, side panels, top panel, or background.
+- Do not remove, cover, redraw, move, resize, recolor, or alter any part of the preserved central artwork.
+""".rstrip()
+    if request.product == "白色紅葉少棒衣服":
+        product_lock_text = """
+
+STRICT HONGYE SHIRT TWO-SLEEVE-CUFF REPLACEMENT LOCK:
+
+- Image A is the PRODUCT IMAGE, the DIRECT EDIT TARGET, and the main image to modify. Edit Image A in place; do not regenerate, redesign, or redraw a different shirt.
+- Image B is the MOTIF REFERENCE ONLY. Use it only as the source design for the two sleeve-cuff replacement bands.
+- Replace only the existing decorative motif band at the left sleeve cuff and the matching band at the right sleeve cuff. These two cuff bands are the only edit areas.
+- Apply Image B to both cuffs, adapting, scaling, cropping, simplifying, repeating, and arranging it along each narrow cuff band as needed while preserving the motif's identity, key shapes, and colors.
+- Make the new motif follow each sleeve opening's angle, curve, fabric shape, folds, lighting, and perspective.
+- Render it as realistic woven fabric trim physically sewn into each cuff, with textile weave, stitched edges, natural thickness, shadows, and material integration. Do not paste flat images or stickers onto the sleeves.
+- Preserve the rest of the shirt exactly: white color, silhouette, cut, collar, sleeves, hems, seams, fabric texture, proportions, and all chest artwork and text, including the maple leaf, "HongYe", and "1968".
+- Preserve the original camera angle, framing, lighting, shadows, material appearance, scale, and background exactly as shown in Image A.
+- Do not modify, cover, move, resize, recolor, redraw, or redesign any area outside the two sleeve-cuff bands.
+""".rstrip()
+    if request.product == "黑色紅葉少棒衣服":
+        product_lock_text = """
+
+STRICT BLACK HONGYE SHIRT LOWER-BAND REPLACEMENT LOCK:
+
+- Image A is the PRODUCT IMAGE, the DIRECT EDIT TARGET, and the main image to modify. Edit Image A in place; do not regenerate, redesign, or redraw a different shirt.
+- Image B is the MOTIF REFERENCE ONLY. Use it only as the source design for the lower-front replacement band.
+- Replace only the existing wide horizontal geometric motif band across the lower front of the shirt, below the central chest artwork. That exact band footprint is the only edit area.
+- Remove the original lower-band pattern and apply Image B within the same width, height, and boundaries. Scale, crop, simplify, repeat, and arrange the motif horizontally as needed while preserving its identity, key shapes, and colors.
+- Follow the shirt fabric's surface, drape, folds, lighting, and perspective. Integrate the motif naturally into the textile with realistic fabric texture, printing or weaving, edge alignment, shadows, and material detail. Do not paste a flat rectangular image or sticker onto the shirt.
+- Preserve the rest of the shirt exactly: black color, silhouette, cut, collar, sleeves, hems, seams, fabric texture, proportions, and all upper chest artwork and text, including "紅葉少棒", the red maple leaf, ball, yellow slash, and "1968".
+- Preserve the original camera angle, framing, lighting, shadows, material appearance, scale, and background exactly as shown in Image A.
+- Do not modify, cover, move, resize, recolor, redraw, or redesign any area outside the original lower motif band.
 """.rstrip()
     if request.placement == "帽簷":
         placement_lock_text = """

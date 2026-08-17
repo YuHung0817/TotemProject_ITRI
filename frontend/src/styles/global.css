@@ -557,6 +557,9 @@ html[data-app-page="chat"] .hero { height:auto; min-height:100dvh; overflow:visi
 .asset-viewer-toolbar button { min-width:42px; height:42px; padding:0 13px; border:1px solid rgba(255,255,255,.3); border-radius:999px; background:rgba(255,255,255,.16); color:#fff; font-size:14px; backdrop-filter:blur(10px); pointer-events:auto; }
 .asset-viewer-toolbar button:first-child { width:42px; padding:0; font-size:27px; }
 .asset-viewer-toolbar > div { display:flex; gap:8px; pointer-events:auto; }
+.asset-viewer > .asset-viewer-download-button { position:absolute; top:max(14px,env(safe-area-inset-top)); right:64px; z-index:3; width:42px; min-width:42px; height:42px; padding:0; display:grid; place-items:center; border:1px solid rgba(255,255,255,.3); border-radius:50%; background:rgba(255,255,255,.16); color:#fff; backdrop-filter:blur(10px); }
+.asset-viewer-download-button .download-icon { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.asset-viewer > .asset-viewer-download-button:disabled { opacity:.65; }
 .favorite-actions { position:absolute; top:4px; right:4px; display:flex; gap:6px; }
 @media (hover:hover) and (pointer:fine) {
   .favorite-actions { opacity:0; visibility:hidden; pointer-events:none; transform:translateY(-4px); transition:opacity .16s ease,transform .16s ease,visibility .16s; }
