@@ -7,6 +7,45 @@ from app.core.config import get_settings
 from app.services import image_generation
 
 
+def test_all_palette_colors_to_one_target_falls_back_to_image_edit(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(get_settings(), "image_storage_root", str(tmp_path))
+    source = Image.new("RGB", (3, 1))
+    source.putdata([(232, 185, 45), (35, 76, 125), (244, 239, 226)])
+    source.save(tmp_path / "old_original.png")
+
+    edited = Image.new("RGB", (3, 1))
+    edited.putdata([(0, 0, 0), (0, 0, 0), (244, 239, 226)])
+    buffer = BytesIO()
+    edited.save(buffer, format="PNG")
+    client = AllToBlackClient(base64.b64encode(buffer.getvalue()).decode())
+    old = {
+        "original_filename": "old_original.png",
+        "palette_name": "original",
+        "prompt": "original",
+        "request": {"prompt": "diamond motif", "elements": ["bird"]},
+    }
+
+    record = image_generation.recolor_existing_variant(old, "黑色", client)
+
+    assert record["_used_image_api"] is True
+    assert len(client.images.calls) == 1
+    result = Image.open(tmp_path / record["original_filename"]).convert("RGB")
+    assert len(set(result.getdata())) == 2
+
+
+def test_meaningful_color_count_rejects_antialiasing_noise() -> None:
+    almost_black = Image.new("RGB", (200, 1), (0, 0, 0))
+    almost_black.putpixel((0, 0), (2, 2, 2))
+    two_color = Image.new("RGB", (200, 1), (0, 0, 0))
+    for x in range(20):
+        two_color.putpixel((x, 0), (244, 239, 226))
+
+    assert image_generation.meaningful_color_count(almost_black) == 1
+    assert image_generation.meaningful_color_count(two_color) == 2
+
+
 class FakeResponses:
     def create(self, **_kwargs):
         return type(
@@ -57,6 +96,30 @@ class LowConfidenceClient:
 
 class LocalizedEditClient:
     responses = FakeResponses()
+
+    def __init__(self, encoded_image: str) -> None:
+        self.images = FakeImageEdits(encoded_image)
+
+
+class AllToBlackResponses:
+    def create(self, **_kwargs):
+        return type(
+            "Response",
+            (),
+            {
+                "output_text": (
+                    '{"confidence":0.95,"replacements":['
+                    '{"source_rgb":[232,185,45],"target_rgb":[0,0,0],"source_name":"yellow","target_name":"black"},'
+                    '{"source_rgb":[35,76,125],"target_rgb":[0,0,0],"source_name":"blue","target_name":"black"},'
+                    '{"source_rgb":[244,239,226],"target_rgb":[0,0,0],"source_name":"white","target_name":"black"}'
+                    ']}'
+                )
+            },
+        )()
+
+
+class AllToBlackClient:
+    responses = AllToBlackResponses()
 
     def __init__(self, encoded_image: str) -> None:
         self.images = FakeImageEdits(encoded_image)

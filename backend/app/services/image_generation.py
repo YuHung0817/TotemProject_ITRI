@@ -23,6 +23,8 @@ from app.services.image_processing import (
     save_image_from_base64,
     save_source_image,
     REPEAT_COUNT,
+    lab_distance,
+    rgb_to_lab,
 )
 from app.services.prompt_compiler import build_generation_prompt
 
@@ -30,6 +32,8 @@ DEFAULT_MODEL = get_settings().openai_image_model
 DEFAULT_QUALITY = "medium"
 GENERATION_SIZE = "1536x1024"
 RECOLOR_CONFIDENCE_THRESHOLD = 0.91
+RECOLOR_MINIMUM_COLOR_FRACTION = 0.005
+RECOLOR_MINIMUM_LAB_DISTANCE = 12.0
 LOCAL_RECOLOR_TERMS = (
     "上方",
     "下方",
@@ -69,6 +73,25 @@ def print_prompt_comparison(prompt: str, revised_prompt: str | None) -> None:
 def palette_record(source: Image.Image, color_count: int = 5) -> dict[str, Any]:
     colors = extract_dominant_palette(source.convert("RGB"), color_count=color_count)
     return {"colors": [{"rgb": list(color)} for color in colors]}
+
+
+def meaningful_color_count(source: Image.Image, color_count: int = 8) -> int:
+    """Count visually distinct colors while ignoring tiny antialiasing remnants."""
+    sample = source.convert("RGB")
+    sample.thumbnail((512, 512), Image.Resampling.NEAREST)
+    quantized = sample.quantize(colors=color_count).convert("RGB")
+    counts = quantized.getcolors(maxcolors=color_count) or []
+    minimum_pixels = max(1, int(sample.width * sample.height * RECOLOR_MINIMUM_COLOR_FRACTION))
+    meaningful = [color for count, color in counts if count >= minimum_pixels]
+    distinct: list[tuple[int, int, int]] = []
+    for color in sorted(meaningful, key=lambda item: sum(item)):
+        color_lab = rgb_to_lab(color)
+        if all(
+            lab_distance(color_lab, rgb_to_lab(existing)) >= RECOLOR_MINIMUM_LAB_DISTANCE
+            for existing in distinct
+        ):
+            distinct.append(color)
+    return len(distinct)
 
 
 def record_palette_colors(record: dict[str, Any]) -> list[tuple[int, int, int]]:
@@ -489,6 +512,14 @@ matches multiple palette entries with different shades, include every matching s
             (source_rgb, target_and_label[0], target_and_label[1])
             for source_rgb, target_and_label in expanded.items()
         ]
+        if (
+            len({source_rgb for source_rgb, _, _ in replacements}) >= len(current_palette)
+            and len({target_rgb for _, target_rgb, _ in replacements}) == 1
+        ):
+            safe_print(
+                "[換色安全閥] 所有主要來源色會收斂成同一顏色，改用 Image Edit。"
+            )
+            return edit_palette_with_image_model(old, instruction, client, source_path)
         safe_print("[換色判斷] 使用 Pillow 換色。")
         safe_print(
             "[debug:gai-color-resolution] "
@@ -514,6 +545,13 @@ matches multiple palette entries with different shades, include every matching s
             pixels.append(nearest[1] if distance < 50 else pixel)
         recolored = Image.new("RGB", source.size)
         recolored.putdata(pixels)
+        if meaningful_color_count(source) >= 2 and meaningful_color_count(recolored) < 2:
+            safe_print(
+                "[換色安全閥] Pillow 結果由多色退化為單一有效色，改用 Image Edit。"
+            )
+            if client is not None:
+                return edit_palette_with_image_model(old, instruction, client, source_path)
+            raise ValueError("換色結果只剩單一有效顏色，請指定要更換的來源顏色。")
         palette_name = "、".join(item[2] for item in replacements)
     else:
         choices = [name for name in PALETTE_COLORS if name != old.get("palette_name")]
