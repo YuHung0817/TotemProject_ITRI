@@ -30,6 +30,26 @@ def add_product_reference_instructions(
     }
     hongye_shirt = request.product == "白色紅葉少棒衣服"
     black_hongye_shirt = request.product == "黑色紅葉少棒衣服"
+    hongye_beverage_carrier = request.product in {
+        "紅葉飲料提袋－白",
+        "紅葉飲料提袋－黑",
+    }
+    hongye_canvas_bag = request.product in {
+        "紅葉帆布袋－白",
+        "紅葉帆布袋－黑",
+    }
+    hongye_lunch_bag = request.product in {
+        "紅葉午餐袋－白",
+        "紅葉午餐袋－黑",
+    }
+    hongye_tote_bag = request.product in {
+        "紅葉托特包－白",
+        "紅葉托特包－黑",
+    }
+    hongye_drawstring_bag = request.product in {
+        "紅葉束口袋－白",
+        "紅葉束口袋－黑",
+    }
     phone_lanyard = request.product in {"圖騰織帶手機掛繩", "黑色手機掛繩"}
     if reference_role == "target":
         reference_description = """Image A is the DIRECT EDIT TARGET.
@@ -48,7 +68,129 @@ def add_product_reference_instructions(
         continuity_instruction = (
             "Edit Image A directly instead of creating a redesigned product."
         )
-    if black_hongye_shirt:
+    if hongye_drawstring_bag:
+        preserved_drawstring_details = (
+            'the black pouch body and its color and texture, and the white "1968" and "UNINANG" text'
+            if request.product == "紅葉束口袋－黑"
+            else 'the ivory-white pouch body and its color and texture, and the black "1968" and "UNINANG" text'
+        )
+        edit_scope = f"""Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET, and main image to
+  modify in place. Image B is the MOTIF REFERENCE ONLY, never the product, composition,
+  background, or replacement object. The existing horizontal decorative motif band at the
+  very bottom of the visible pouch front is the only edit area. Completely replace only the
+  old motif within that exact band footprint with Image B, extending the new motif horizontally
+  across the full original band from the left edge to the right edge. Preserve Image B's original
+  colors and design as faithfully as possible; do not redesign it. Scale, crop, repeat, and arrange
+  it horizontally only as needed to fit the band width while maintaining recognizable motif
+  identity and continuous layout. Follow the pouch's actual bottom width, front-plane perspective,
+  slight fabric undulations, bottom seam, wrinkles, lighting, and surface angle. Render a realistic
+  printed or woven textile mockup with visible fabric weave, fibers, stitching, shadows, and natural
+  material integration—not a flat pasted image or sticker. Preserve everything else in Image A
+  exactly: {preserved_drawstring_details}, drawstrings and knots, drawstring
+  channel, complete pouch shape and proportions, fabric wrinkles and folds, seams, central red
+  maple-leaf embroidery and turquoise veins, every surrounding
+  decorative symbol, camera angle, composition, lighting, shadows, background, and product-
+  photography style. Do not modify, cover, redraw, recolor, move, resize, or regenerate anything
+  outside the original bottom horizontal motif band, especially the central maple leaf and text."""
+    elif hongye_tote_bag:
+        preserved_tote_fabric = (
+            "black tote body and its color and texture"
+            if request.product == "紅葉托特包－黑"
+            else "ivory-white tote body and its color and texture"
+        )
+        edit_scope = f"""Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET, and main image to
+  modify in place. Image B is the MOTIF REFERENCE ONLY, never the product, composition,
+  background, or replacement object. Replace only the old motif inside the two existing
+  symmetrical decorative bands. Each side must remain one visually continuous woven band:
+  cover the complete left or right handle, including its full curved upper section, follow
+  the handle downward, pass naturally through its attachment point at the bag opening, and
+  continue vertically along the matching decorative strip on the visible front bag body.
+  The two original left and right handle-and-body band footprints are the only edit areas.
+  Apply Image B continuously and consistently to both bands, adapting, scaling, cropping,
+  repeating, and arranging it along their length while preserving the motif's recognizable
+  identity and colors. Keep both sides symmetric, aligned, equal in width, and visually tidy.
+  Follow the handles' actual width, upper curves, folds, direction, fabric shape, perspective,
+  seams, lighting, and occlusion. Render realistic woven or embroidered textile bands with
+  visible fabric weave, stitching, thickness, shadows, creases, and authentic material detail—
+  not flat pasted images or stickers. Preserve everything else in Image A exactly: the
+  {preserved_tote_fabric}, complete structured bag shape and proportions,
+  opening, pocket, base, edges, seams, all metal hardware and attachments, central red maple-leaf
+  embroidery and turquoise veins, "1968", "UNINANG", every surrounding decorative symbol,
+  camera angle, composition, lighting, shadows, background, and product-photography style. Do not
+  modify, cover, redraw, recolor, move, resize, or redesign anything outside the two original
+  continuous handle-and-body bands."""
+    elif hongye_lunch_bag:
+        preserved_lunch_fabric = (
+            "black fabric body and its texture"
+            if request.product == "紅葉午餐袋－黑"
+            else "ivory-white / off-white fabric body and its texture"
+        )
+        edit_scope = f"""Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET, and main image to
+  modify in place. Image B is the MOTIF REFERENCE ONLY, never the product, composition,
+  background, or replacement object. The existing horizontal decorative motif band at the
+  very bottom of the visible front panel is the only edit area. Completely replace only the
+  old motif inside that exact band footprint with Image B. Fit, scale, crop, repeat, and arrange
+  the new motif horizontally as needed while preserving its recognizable identity and colors.
+  Keep the band within its original upper and lower boundaries and follow the front panel's
+  angle, slight perspective, fabric surface, seams, lighting, and shape. Render realistic woven
+  or printed textile detail integrated into the bag—not a flat pasted image or sticker.
+  Preserve everything else in Image A exactly: the {preserved_lunch_fabric}, carrying handles,
+  zipper and zipper pull, side panels, gussets, piping, seams, complete
+  product shape and construction, central red maple leaf and turquoise veins, the original
+  "1968" and "UNINANG" text with their exact original colors, every surrounding small decorative
+  symbol, product angle, composition,
+  proportions, dimensions, lighting, shadows, background, and product-photography style. Do not
+  modify, cover, redraw, recolor, move, resize, or redesign anything outside the original bottom
+  horizontal motif band."""
+    elif hongye_canvas_bag:
+        preserved_canvas_fabric = (
+            "black canvas color and texture"
+            if request.product == "紅葉帆布袋－黑"
+            else "white canvas color and texture"
+        )
+        edit_scope = f"""Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET, and main image to
+  modify in place. Image B is the MOTIF REFERENCE ONLY, never the product, composition,
+  background, or replacement object. Replace only the old motif inside the two existing
+  symmetrical decorative bands. Each band must remain one visually continuous woven strip:
+  follow the full visible length of the left or right carrying handle, pass naturally through
+  its original attachment point at the bag opening, and continue vertically down the matching
+  side of the front bag body to the bottom edge. The two original left and right band footprints
+  are the only edit areas. Apply Image B continuously and consistently to both bands, adapting,
+  scaling, cropping, repeating, and arranging it along their length as needed while preserving
+  the motif's recognizable identity and colors. Keep both sides symmetric, aligned, equal in
+  width, and visually tidy. Follow each handle's width, curve, folds, direction, fabric shape,
+  perspective, seams, lighting, and occlusion. Render realistic woven textile bands physically
+  integrated into the bag, with fabric weave, stitching, thickness, shadows, and authentic
+  printed or woven detail—not flat pasted images or stickers. Preserve everything else in
+  Image A exactly: the {preserved_canvas_fabric}, bag shape and construction, top opening,
+  edges, seams, proportions, central red maple leaf, turquoise leaf veins, "1968", "UNINANG",
+  every surrounding decorative symbol, camera angle, composition, lighting, shadows, transparent
+  background, and product-photography style. Do not modify, cover, redraw, recolor, move, or
+  redesign anything outside the two original continuous handle-and-body bands."""
+    elif hongye_beverage_carrier:
+        preserved_carrier_fabric = (
+            "black fabric and its texture"
+            if request.product == "紅葉飲料提袋－黑"
+            else "white fabric and its texture"
+        )
+        edit_scope = f"""Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET, and main image to
+  modify in place. Image B is the MOTIF REFERENCE ONLY, never the product, composition,
+  background, or replacement object. Replace the original black-and-white motif completely
+  in exactly three and only three areas on Image A: (1) the long front-facing decorative
+  strip running along the carrying handle, (2) the upper horizontal decorative band around
+  the cup sleeve, and (3) the lower horizontal decorative band around the cup sleeve. These
+  three existing band footprints are the only edit areas. Apply Image B continuously within
+  each footprint, scaling and arranging it to suit each area's width, length, and aspect ratio
+  while preserving the motif's recognizable identity and colors. Follow the handle and cup
+  sleeve curvature, perspective, fabric shape, seams, lighting, and occlusion. Render the new
+  motif as realistic woven textile decoration integrated into the fabric, with natural weave,
+  stitching, thickness, shadows, and material detail—not as a flat pasted image or sticker.
+  Preserve everything else in Image A exactly: the {preserved_carrier_fabric}, complete
+  product construction and silhouette, transparent cup, lid, straw, central red maple-leaf
+  emblem and all text, proportions, camera angle, lighting, shadows, original background,
+  and product-photography style. Do not modify, cover, redraw, recolor, move, or redesign
+  anything outside those three original black-and-white motif bands."""
+    elif black_hongye_shirt:
         edit_scope = """Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET, and main image to
   modify in place. Image B is the MOTIF REFERENCE ONLY. The existing wide horizontal
   geometric motif band across the lower shirt front is the only edit area. Remove that
@@ -103,6 +245,11 @@ def add_product_reference_instructions(
   existing bottom band with Image B, fitted to the same long horizontal footprint and
   perspective. Preserve {preserved_details},
   seams, strap, hardware, silhouette, camera angle, lighting, and background exactly.
+  Keep the complete bag and complete shoulder-strap loop inside the canvas, including the
+  strap apex, bag bottom, both side edges, and all hardware. Zoom out and leave clear
+  background margin on all four sides; the full product including its strap must occupy no
+  more than approximately 85% of the image height. Never use a close-up or crop any product
+  edge. This framing requirement overrides Image A's original product scale.
   Do not modify, cover, move, duplicate, or add anything outside that bottom motif band."""
     elif school_bag:
         edit_scope = """Only modify the visible front-flap motif area.

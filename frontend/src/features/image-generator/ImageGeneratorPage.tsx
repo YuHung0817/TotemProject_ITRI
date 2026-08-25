@@ -28,21 +28,42 @@ const colorChoices:ColorTag[] = [
 const products = [
   // "棒球帽","漁夫帽","圓領T-shirt","短版T-shirt","Polo衫","帽T",
   // "拉鍊帽T","飛行外套","牛仔外套","教練外套","背心",
-  "托特包","黑色托特包","帆布袋","黑色帆布袋","束口袋","黑色束口袋","午餐袋","黑色午餐袋","飲料提袋","黑色飲料袋","環形鑰匙圈","黑色環形鑰匙圈","台灣高中生側背書包","高中生紅色側背包","高中生黑色側背包","紅葉少棒紅書包","紅葉少棒黑書包","紅葉少棒綠書包","貝殼零錢包","黑色貝殼零錢包","紅葉少棒黑色零錢包","紅葉少棒紅色零錢包","白色紅葉少棒衣服","黑色紅葉少棒衣服","圖騰織帶手機掛繩","黑色手機掛繩",
+  "帆布袋","黑色帆布袋","紅葉帆布袋－白","紅葉帆布袋－黑",
+  "午餐袋","黑色午餐袋","紅葉午餐袋－白","紅葉午餐袋－黑",
+  "束口袋","黑色束口袋","紅葉束口袋－白","紅葉束口袋－黑",
+  "飲料提袋","黑色飲料袋","紅葉飲料提袋－白","紅葉飲料提袋－黑",
+  "貝殼零錢包","黑色貝殼零錢包","紅葉少棒紅色零錢包","紅葉少棒黑色零錢包",
+  "托特包","黑色托特包","紅葉托特包－白","紅葉托特包－黑",
+  "台灣高中生側背書包","紅葉少棒綠書包",
+  "高中生紅色側背包","紅葉少棒紅書包",
+  "高中生黑色側背包","紅葉少棒黑書包",
+  "白色紅葉少棒衣服","黑色紅葉少棒衣服",
+  "圖騰織帶手機掛繩","黑色手機掛繩",
+  "環形鑰匙圈","黑色環形鑰匙圈",
 ];
 const productReferenceUrl = (product:string) =>
   `${API}/images/product-references/${encodeURIComponent(product)}?v=2`;
 const designedCarrierCards:Record<string,string> = {
   "托特包":"/carrier-cards/tote-bag.svg",
   "黑色托特包":"/carrier-cards/black-tote-bag.svg",
+  "紅葉托特包－白":"/carrier-cards/hongye-white-tote-bag.svg",
+  "紅葉托特包－黑":"/carrier-cards/hongye-black-tote-bag.svg",
   "帆布袋":"/carrier-cards/canvas-bag.svg",
   "黑色帆布袋":"/carrier-cards/black-canvas-bag.svg",
+  "紅葉帆布袋－白":"/carrier-cards/hongye-white-canvas-bag.svg",
+  "紅葉帆布袋－黑":"/carrier-cards/hongye-black-canvas-bag.svg",
   "束口袋":"/carrier-cards/drawstring-bag.svg",
   "黑色束口袋":"/carrier-cards/black-drawstring-bag.svg",
+  "紅葉束口袋－白":"/carrier-cards/hongye-white-drawstring-bag.svg",
+  "紅葉束口袋－黑":"/carrier-cards/hongye-black-drawstring-bag.svg",
   "午餐袋":"/carrier-cards/lunch-bag.svg",
   "黑色午餐袋":"/carrier-cards/black-lunch-bag.svg",
+  "紅葉午餐袋－白":"/carrier-cards/hongye-white-lunch-bag.svg",
+  "紅葉午餐袋－黑":"/carrier-cards/hongye-black-lunch-bag.svg",
   "飲料提袋":"/carrier-cards/beverage-carrier.svg",
   "黑色飲料袋":"/carrier-cards/black-beverage-carrier.svg",
+  "紅葉飲料提袋－白":"/carrier-cards/hongye-white-beverage-carrier.svg",
+  "紅葉飲料提袋－黑":"/carrier-cards/hongye-black-beverage-carrier.svg",
   "環形鑰匙圈":"/carrier-cards/loop-key-fob.svg",
   "黑色環形鑰匙圈":"/carrier-cards/black-loop-key-fob.svg",
   "台灣高中生側背書包":"/carrier-cards/taiwan-school-shoulder-bag.svg",
@@ -60,6 +81,36 @@ const designedCarrierCards:Record<string,string> = {
   "圖騰織帶手機掛繩":"/carrier-cards/phone-lanyard.svg",
   "黑色手機掛繩":"/carrier-cards/black-phone-lanyard.svg",
 };
+type DetailCarrierChoice = {
+  label:string;
+  standard?:string;
+  hongye?:string;
+  fixed?:string;
+  trademarkMode:"choice"|"required"|"none";
+};
+const detailCarrierChoices:DetailCarrierChoice[] = [
+  {label:"淺色帆布包",standard:"帆布袋",hongye:"紅葉帆布袋－白",trademarkMode:"choice"},
+  {label:"深色帆布包",standard:"黑色帆布袋",hongye:"紅葉帆布袋－黑",trademarkMode:"choice"},
+  {label:"淺色午餐袋",standard:"午餐袋",hongye:"紅葉午餐袋－白",trademarkMode:"choice"},
+  {label:"深色午餐袋",standard:"黑色午餐袋",hongye:"紅葉午餐袋－黑",trademarkMode:"choice"},
+  {label:"淺色束口袋",standard:"束口袋",hongye:"紅葉束口袋－白",trademarkMode:"choice"},
+  {label:"深色束口袋",standard:"黑色束口袋",hongye:"紅葉束口袋－黑",trademarkMode:"choice"},
+  {label:"淺色飲料提袋",standard:"飲料提袋",hongye:"紅葉飲料提袋－白",trademarkMode:"choice"},
+  {label:"深色飲料提袋",standard:"黑色飲料袋",hongye:"紅葉飲料提袋－黑",trademarkMode:"choice"},
+  {label:"淺色零錢包",standard:"貝殼零錢包",hongye:"紅葉少棒紅色零錢包",trademarkMode:"choice"},
+  {label:"深色零錢包",standard:"黑色貝殼零錢包",hongye:"紅葉少棒黑色零錢包",trademarkMode:"choice"},
+  {label:"淺色托特包",standard:"托特包",hongye:"紅葉托特包－白",trademarkMode:"choice"},
+  {label:"深色托特包",standard:"黑色托特包",hongye:"紅葉托特包－黑",trademarkMode:"choice"},
+  {label:"綠色高中生側背包",standard:"台灣高中生側背書包",hongye:"紅葉少棒綠書包",trademarkMode:"choice"},
+  {label:"紅色高中生側背包",standard:"高中生紅色側背包",hongye:"紅葉少棒紅書包",trademarkMode:"choice"},
+  {label:"黑色高中生側背包",standard:"高中生黑色側背包",hongye:"紅葉少棒黑書包",trademarkMode:"choice"},
+  {label:"淺色衣服",fixed:"白色紅葉少棒衣服",trademarkMode:"required"},
+  {label:"深色衣服",fixed:"黑色紅葉少棒衣服",trademarkMode:"required"},
+  {label:"淺色手機掛繩",fixed:"圖騰織帶手機掛繩",trademarkMode:"none"},
+  {label:"深色手機掛繩",fixed:"黑色手機掛繩",trademarkMode:"none"},
+  {label:"淺色鑰匙圈",fixed:"環形鑰匙圈",trademarkMode:"none"},
+  {label:"深色鑰匙圈",fixed:"黑色環形鑰匙圈",trademarkMode:"none"},
+];
 const elementNames = ["山豬","山羌","山羊","水鹿","台灣黑熊","月亮","太陽","山脈","河川","鳥","小米","菖蒲","葫蘆","玉米","稻米","樹豆","茅草","星星","菱形","射耳祭"];
 const fallbackElementImage = "/elements/botton＿tent.png";
 const elementImages: Record<string, string> = {
@@ -387,7 +438,7 @@ function CollectionPickerPanel({open,collections,selectedIds,search,onSearch,onT
     finally { setCreating(false); }
   }
   if (!presence.present) return null;
-  return createPortal(<div ref={panelRef} className="collection-picker-layer" data-motion={presence.phase} onKeyDown={trapFocus}><button type="button" className="collection-picker-backdrop" tabIndex={-1} onClick={onClose} aria-label="關閉收藏資料夾選擇器"/><section className="collection-picker" role="dialog" aria-modal="true" aria-label="儲存至收藏資料夾"><header><strong>儲存</strong><button type="button" className="collection-picker-close" onClick={onClose} aria-label="關閉收藏資料夾選擇器"><span aria-hidden="true">×</span></button></header><label className="collection-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input value={search} onChange={event=>onSearch(event.target.value)} placeholder="搜尋"/></label><div className="collection-picker-list">{visibleCollections.map(collection=>{const selected=selectedIds.includes(collection.id);const preview=collection.preview_urls?.[0]??collection.preview_url;return <label key={collection.id}>{preview?<img className="collection-picker-thumb" src={`${SERVER}${preview}`} alt=""/>:<span className="collection-picker-thumb empty"><BookmarkIcon/></span>}<strong>{collection.name}</strong><input type="checkbox" checked={selected} onChange={()=>onToggle(selected?selectedIds.filter(id=>id!==collection.id):[...selectedIds,collection.id])}/></label>;})}</div><form className="collection-create" onSubmit={submitNewCollection}><button type="submit" disabled={creating} aria-label={newName.trim()?"建立圖版":"輸入圖版名稱"}>{creating?"…":"＋"}</button><input ref={nameInputRef} value={newName} onChange={event=>onNewName(event.target.value)} placeholder="輸入新圖版名稱" aria-label="新圖版名稱" disabled={creating}/></form></section></div>,document.body);
+  return createPortal(<div ref={panelRef} className="collection-picker-layer" data-motion={presence.phase} onKeyDown={trapFocus}><button type="button" className="collection-picker-backdrop" tabIndex={-1} onClick={onClose} aria-label="關閉收藏資料夾選擇器"/><section className="collection-picker" role="dialog" aria-modal="true" aria-label="儲存至收藏資料夾"><header><strong>儲存</strong><button type="button" className="collection-picker-close" onClick={onClose} aria-label="關閉收藏資料夾選擇器"><span aria-hidden="true">×</span></button></header><label className="collection-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input value={search} onChange={event=>onSearch(event.target.value)} placeholder="搜尋"/></label><div className="collection-picker-list">{visibleCollections.map(collection=>{const selected=selectedIds.includes(collection.id);const preview=collection.preview_urls?.[0]??collection.preview_url;return <label key={collection.id}>{preview?<img className="collection-picker-thumb" src={`${SERVER}${preview}`} alt=""/>:<span className="collection-picker-thumb empty"><BookmarkIcon/></span>}<strong>{collection.name}</strong><input type="checkbox" checked={selected} onChange={()=>onToggle(selected?selectedIds.filter(id=>id!==collection.id):[...selectedIds,collection.id])}/></label>;})}</div><form className={`collection-create ${newName.trim()?"has-name":""}`} onSubmit={submitNewCollection}><button type="submit" disabled={creating} aria-label={newName.trim()?"建立圖版":"輸入圖版名稱"}>{creating?"…":"＋"}</button><input ref={nameInputRef} value={newName} onChange={event=>onNewName(event.target.value)} placeholder="輸入新圖版名稱" aria-label="新圖版名稱" disabled={creating}/></form></section></div>,document.body);
 }
 
 function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarrierPreview, generationBlocked, onPreviewGenerationChange, initialAsset, squareCard=false }: { image: ImageRecord; updateImage: (oldId:string, value:ImageRecord) => void; setStatus: (value: string) => void; askRegenerate:(image:ImageRecord,sourceAsset?:"motif"|"preview",heroTransition?:boolean,initialMode?:RevisionMode|null)=>void; generateCarrierPreview:(product:string)=>Promise<void>; generationBlocked:boolean; onPreviewGenerationChange:(active:boolean)=>void; initialAsset?: "motif"|"preview"; squareCard?:boolean }) {
@@ -402,6 +453,7 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
   const [pendingCarrier,setPendingCarrier]=useState<string|null>(null);
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [carrierMenuOpen,setCarrierMenuOpen]=useState(false);
+  const [pendingDetailCarrierChoice,setPendingDetailCarrierChoice]=useState<DetailCarrierChoice|null>(null);
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [collectionSearch, setCollectionSearch] = useState("");
   const [newCollectionName, setNewCollectionName] = useState("");
@@ -500,6 +552,8 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
   }
 
   function closeDetail() {
+    setCarrierMenuOpen(false);
+    setPendingDetailCarrierChoice(null);
     const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const startViewTransition=document.startViewTransition?.bind(document);
     const canReturnToThumbnail=detailView === cardAsset;
@@ -582,6 +636,12 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
     }
   }
 
+  function chooseDetailCarrier(product:string) {
+    if (generationBlocked || usedCarrierProducts.has(product)) return;
+    setPendingDetailCarrierChoice(null);
+    void generateNextCarrierPreview(product);
+  }
+
   async function openCollectionPicker() {
     const response = await fetch(`${API}/images/collections`);
     const data = await readResponse(response);
@@ -634,8 +694,9 @@ function ImageCard({ image, updateImage, setStatus, askRegenerate, generateCarri
               : <img key={detailView==="preview"?selectedPreviewRecord?.id:detailView} className={`detail-swap-image ${detailSwapDirection}`} src={`${SERVER}${detailView === "preview" ? displayedPreviewUrl : motifUrl}`} alt={assetLabels[detailView]} style={{viewTransitionName:heroTransitioning?"active-image-hero":"active-detail-swap"}}/>
           }</div>
         {detailView==="preview"&&<div className={`preview-book-controls ${previewPageCount>1?"":"placeholder"}`} aria-hidden={previewPageCount>1?undefined:true}>{previewPageCount>1&&<><button type="button" disabled={previewIndex===0} onClick={()=>turnPreviewPage("previous")} aria-label="上一張商品照">‹</button><span>{previewIndex+1} / {previewPageCount}</span><button type="button" disabled={previewIndex===previewPageCount-1} onClick={()=>turnPreviewPage("next")} aria-label="下一張商品照">›</button></>}</div>}
-        <div className="image-detail-meta"><ExpiryLabel expiresAt={detailRecord.expires_at}/>{detailView==="preview"?<div className="detail-carrier-picker">{carrierMenuOpen&&<div className="detail-carrier-menu" role="menu" aria-label="選擇商品載體">{products.map(product=>{const used=usedCarrierProducts.has(product);return <button type="button" role="menuitem" disabled={used||generationBlocked} onClick={()=>void generateNextCarrierPreview(product)} aria-label={used?`${product}，已生成`:product} key={product}>{product}{used?<small>已生成</small>:null}</button>;})}</div>}<button type="button" className="detail-similar-button" disabled={generationBlocked} onClick={()=>setCarrierMenuOpen(value=>!value)} aria-label="選擇商品載體" aria-expanded={carrierMenuOpen}><CarrierIcon/><span>載體</span></button></div>:null}</div>
+        <div className="image-detail-meta"><ExpiryLabel expiresAt={detailRecord.expires_at}/>{detailView==="preview"?<div className="detail-carrier-picker">{carrierMenuOpen&&<div className="detail-carrier-menu" role="menu" aria-label="選擇商品載體">{detailCarrierChoices.map(choice=>{const variants=[choice.standard,choice.hongye,choice.fixed].filter((product):product is string=>Boolean(product));const allUsed=variants.every(product=>usedCarrierProducts.has(product));return <button type="button" role="menuitem" disabled={allUsed||generationBlocked} onClick={()=>{setCarrierMenuOpen(false);setPendingDetailCarrierChoice(choice);}} aria-label={allUsed?`${choice.label}，已生成`:choice.label} key={choice.label}>{choice.label}{allUsed?<small>已生成</small>:null}</button>;})}</div>}<button type="button" className="detail-similar-button" disabled={generationBlocked} onClick={()=>setCarrierMenuOpen(value=>!value)} aria-label="選擇商品載體" aria-expanded={carrierMenuOpen}><CarrierIcon/><span>載體</span></button></div>:null}</div>
       </div>
+      {pendingDetailCarrierChoice&&<div className="collection-delete-layer detail-carrier-confirm-layer" onKeyDown={event=>{if(event.key==="Escape")setPendingDetailCarrierChoice(null);}}><button type="button" className="collection-delete-backdrop" tabIndex={-1} onClick={()=>setPendingDetailCarrierChoice(null)} aria-label="取消選擇載體"/><section className="collection-delete-dialog detail-carrier-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-carrier-confirm-title"><button type="button" className="close-image-button detail-carrier-confirm-close" onClick={()=>setPendingDetailCarrierChoice(null)} aria-label="關閉載體選擇視窗"><CloseButtonIcon/></button><h2 id="detail-carrier-confirm-title">{pendingDetailCarrierChoice.trademarkMode==="choice"?"要不要紅葉商標？":pendingDetailCarrierChoice.trademarkMode==="required"?"要紅葉商標":"不要紅葉商標"}</h2><p>{pendingDetailCarrierChoice.label}</p><small>{pendingDetailCarrierChoice.trademarkMode==="choice"?"請選擇要產生的商品版本。":pendingDetailCarrierChoice.trademarkMode==="required"?"此載體固定使用紅葉商標版本。":"此載體固定使用無紅葉商標版本。"}</small><div className={`collection-delete-actions detail-carrier-confirm-actions ${pendingDetailCarrierChoice.trademarkMode==="choice"?"":"single-action"}`}>{pendingDetailCarrierChoice.trademarkMode==="choice"?<><button type="button" disabled={!pendingDetailCarrierChoice.standard||usedCarrierProducts.has(pendingDetailCarrierChoice.standard)} onClick={()=>pendingDetailCarrierChoice.standard&&chooseDetailCarrier(pendingDetailCarrierChoice.standard)}>{pendingDetailCarrierChoice.standard&&usedCarrierProducts.has(pendingDetailCarrierChoice.standard)?"已生成":"不要"}</button><button type="button" className="confirm" disabled={!pendingDetailCarrierChoice.hongye||usedCarrierProducts.has(pendingDetailCarrierChoice.hongye)} onClick={()=>pendingDetailCarrierChoice.hongye&&chooseDetailCarrier(pendingDetailCarrierChoice.hongye)}>{pendingDetailCarrierChoice.hongye&&usedCarrierProducts.has(pendingDetailCarrierChoice.hongye)?"已生成":"要"}</button></>:<button type="button" className="confirm" disabled={!pendingDetailCarrierChoice.fixed||usedCarrierProducts.has(pendingDetailCarrierChoice.fixed)} onClick={()=>pendingDetailCarrierChoice.fixed&&chooseDetailCarrier(pendingDetailCarrierChoice.fixed)}>{pendingDetailCarrierChoice.fixed&&usedCarrierProducts.has(pendingDetailCarrierChoice.fixed)?"已生成":"確認"}</button>}</div></section></div>}
       <nav className="image-detail-gallery" style={{"--active-detail-index":detailViews.indexOf(detailView)} as CSSProperties}>
         <button type="button" className={detailView==="motif"?"active":""} onClick={()=>selectDetailView("motif")}><img src={`${SERVER}${motifUrl}`} alt=""/><span>圖騰原圖</span></button>
         <button type="button" className={detailView==="preview"?"active":""} onClick={()=>selectDetailView("preview")}>{displayedPreviewUrl?<img src={`${SERVER}${displayedPreviewUrl}`} alt=""/>:<i>{image.request?.carrier||generationBlocked?"生成中":"未生成"}</i>}<span>商品展示</span></button>
@@ -832,9 +893,28 @@ function MasonryAssetGrid({assets,onChanged}:{
   assets:GalleryAsset[];
   onChanged:(recordId:string,assetType:AssetType,changes:Partial<Pick<GalleryAsset,"saved"|"favorite"|"collection_ids">>)=>void;
 }) {
-  return <div className="favorites-grid">
-    {[0,1].map(column=><div className="favorites-column" key={column}>
-      {assets.filter((_,index)=>index%2===column).map(asset=><GalleryAssetCard asset={asset} onChanged={onChanged} key={`${asset.record_id}-${asset.asset_type}`}/>)}
+  const gridRef=useRef<HTMLDivElement>(null);
+  const [columnCount,setColumnCount]=useState(2);
+  useLayoutEffect(()=>{
+    const grid=gridRef.current;
+    if(!grid)return;
+    const update=(width:number)=>setColumnCount(width<600?2:Math.max(2,Math.floor((width+10)/190)));
+    update(grid.clientWidth);
+    const observer=new ResizeObserver(entries=>update(entries[0]?.contentRect.width??grid.clientWidth));
+    observer.observe(grid);
+    return()=>observer.disconnect();
+  },[]);
+  const columns=Array.from({length:columnCount},()=>[] as GalleryAsset[]);
+  const heights=Array(columnCount).fill(0) as number[];
+  const heightFactors:Record<AssetType,number>={motif:2/3,preview:1,chart:3/4};
+  assets.forEach(asset=>{
+    const shortest=heights.indexOf(Math.min(...heights));
+    columns[shortest].push(asset);
+    heights[shortest]+=heightFactors[asset.asset_type]+0.08;
+  });
+  return <div className="favorites-grid" ref={gridRef} style={{gridTemplateColumns:`repeat(${columnCount},minmax(0,1fr))`}}>
+    {columns.map((column,index)=><div className="favorites-column" key={index}>
+      {column.map(asset=><GalleryAssetCard asset={asset} onChanged={onChanged} key={`${asset.record_id}-${asset.asset_type}`}/>)}
     </div>)}
   </div>;
 }

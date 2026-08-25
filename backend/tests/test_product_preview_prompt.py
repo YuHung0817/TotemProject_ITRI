@@ -143,6 +143,9 @@ def test_black_hongye_bag_preserves_its_own_product_details() -> None:
     assert "exact black Hongye youth baseball shoulder bag" in prompt
     assert "black fabric, maple-leaf patch" in prompt
     assert "the only edit area" in prompt
+    assert "complete shoulder-strap loop" in prompt
+    assert "no more than approximately 85% of the image height" in prompt
+    assert "framing requirement overrides Image A's original product scale" in prompt
     assert "red fabric" not in prompt
 
 
@@ -254,6 +257,250 @@ def test_black_hongye_shirt_only_replaces_its_lower_motif_band() -> None:
     assert "outside the original lower motif band" in prompt
 
 
+def test_white_hongye_beverage_carrier_replaces_only_three_existing_bands() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉飲料提袋－白",
+        placement="置換三處圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF REFERENCE ONLY" in prompt
+    assert "exactly three and only three areas" in prompt
+    assert "front-facing decorative\n  strip running along the carrying handle" in prompt
+    assert "upper horizontal decorative band" in prompt
+    assert "lower horizontal decorative band" in prompt
+    assert "realistic woven textile decoration" in prompt
+    assert "transparent cup, lid, straw" in prompt
+    assert "central red maple-leaf\n  emblem and all text" in prompt
+    assert "outside those three original black-and-white motif bands" in prompt
+
+
+def test_black_hongye_beverage_carrier_uses_same_three_band_rule() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉飲料提袋－黑",
+        placement="置換三處圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact black Hongye single-cup beverage carrier" in prompt
+    assert "exactly three and only three areas" in prompt
+    assert "front-facing decorative\n  strip running along the carrying handle" in prompt
+    assert "upper horizontal decorative band" in prompt
+    assert "lower horizontal decorative band" in prompt
+    assert "black fabric and its texture" in prompt
+    assert "transparent cup, lid, straw" in prompt
+    assert "central red maple-leaf\n  emblem and all text" in prompt
+    assert "original background" in prompt
+    assert "white fabric and its texture" not in prompt
+
+
+def test_white_hongye_canvas_bag_replaces_only_two_continuous_handle_bands() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉帆布袋－白",
+        placement="置換提帶及袋身兩側圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF REFERENCE ONLY" in prompt
+    assert "two existing\n  symmetrical decorative bands" in prompt
+    assert "one visually continuous woven strip" in prompt
+    assert "continue vertically down the matching\n  side of the front bag body to the bottom edge" in prompt
+    assert "only edit areas" in prompt
+    assert "symmetric, aligned, equal in\n  width" in prompt
+    assert "central red maple leaf" in prompt
+    assert '"1968", "UNINANG"' in prompt
+    assert "outside the two original continuous handle-and-body bands" in prompt
+
+
+def test_black_hongye_canvas_bag_uses_same_continuous_band_rule() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉帆布袋－黑",
+        placement="置換提帶及袋身兩側圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact black Hongye canvas tote bag" in prompt
+    assert "two existing\n  symmetrical decorative bands" in prompt
+    assert "one visually continuous woven strip" in prompt
+    assert "continue vertically down the matching\n  side of the front bag body to the bottom edge" in prompt
+    assert "black canvas color and texture" in prompt
+    assert "central red maple leaf" in prompt
+    assert '"1968", "UNINANG"' in prompt
+    assert "outside the two original continuous handle-and-body bands" in prompt
+    assert "white canvas color and texture" not in prompt
+
+
+def test_white_hongye_lunch_bag_replaces_only_bottom_band() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉午餐袋－白",
+        placement="置換下方圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact ivory-white Hongye insulated lunch bag" in prompt
+    assert "Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF REFERENCE ONLY" in prompt
+    assert "very bottom of the visible front panel is the only edit area" in prompt
+    assert "original upper and lower boundaries" in prompt
+    assert "ivory-white / off-white fabric body" in prompt
+    assert "carrying handles,\n  zipper and zipper pull" in prompt
+    assert "central red maple leaf and turquoise veins" in prompt
+    assert '"1968" and "UNINANG" text with their exact original colors' in prompt
+    assert "product angle, composition" in prompt
+    assert "outside the original bottom\n  horizontal motif band" in prompt
+
+
+def test_black_hongye_lunch_bag_uses_same_bottom_band_rule() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉午餐袋－黑",
+        placement="置換下方圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact black Hongye insulated lunch bag" in prompt
+    assert "very bottom of the visible front panel is the only edit area" in prompt
+    assert "original upper and lower boundaries" in prompt
+    assert "black fabric body and its texture" in prompt
+    assert "carrying handles,\n  zipper and zipper pull" in prompt
+    assert "central red maple leaf and turquoise veins" in prompt
+    assert '"1968" and "UNINANG" text with their exact original colors' in prompt
+    assert "outside the original bottom\n  horizontal motif band" in prompt
+    assert "ivory-white / off-white fabric body" not in prompt
+
+
+def test_white_hongye_tote_replaces_only_continuous_handle_and_body_bands() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉托特包－白",
+        placement="置換提帶及袋身兩側圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact ivory-white structured Hongye tote bag" in prompt
+    assert "Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF REFERENCE ONLY" in prompt
+    assert "two existing\n  symmetrical decorative bands" in prompt
+    assert "including its full curved upper section" in prompt
+    assert "continue vertically along the matching decorative strip" in prompt
+    assert "only edit areas" in prompt
+    assert "symmetric, aligned, equal in width" in prompt
+    assert "all metal hardware and attachments" in prompt
+    assert "central red maple-leaf\n  embroidery and turquoise veins" in prompt
+    assert '"1968", "UNINANG"' in prompt
+    assert "outside the two original\n  continuous handle-and-body bands" in prompt
+
+
+def test_black_hongye_tote_uses_same_continuous_handle_band_rule() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉托特包－黑",
+        placement="置換提帶及袋身兩側圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact black structured Hongye tote bag" in prompt
+    assert "two existing\n  symmetrical decorative bands" in prompt
+    assert "including its full curved upper section" in prompt
+    assert "continue vertically along the matching decorative strip" in prompt
+    assert "black tote body and its color and texture" in prompt
+    assert "all metal hardware and attachments" in prompt
+    assert "central red maple-leaf\n  embroidery and turquoise veins" in prompt
+    assert '"1968", "UNINANG"' in prompt
+    assert "outside the two original\n  continuous handle-and-body bands" in prompt
+    assert "ivory-white tote body" not in prompt
+
+
+def test_white_hongye_drawstring_bag_replaces_only_bottom_band() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉束口袋－白",
+        placement="置換下方圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact ivory-white Hongye drawstring pouch" in prompt
+    assert "Image A is the PRODUCT IMAGE, DIRECT EDIT TARGET" in prompt
+    assert "Image B is the MOTIF REFERENCE ONLY" in prompt
+    assert "very bottom of the visible pouch front is the only edit area" in prompt
+    assert "from the left edge to the right edge" in prompt
+    assert "Preserve Image B's original\n  colors and design as faithfully as possible" in prompt
+    assert "bottom seam, wrinkles" in prompt
+    assert "ivory-white pouch body" in prompt
+    assert "drawstrings and knots" in prompt
+    assert "central red\n  maple-leaf embroidery and turquoise veins" in prompt
+    assert 'black "1968" and "UNINANG" text' in prompt
+    assert "outside the original bottom horizontal motif band" in prompt
+    assert "especially the central maple leaf and text" in prompt
+
+
+def test_black_hongye_drawstring_bag_uses_same_bottom_band_rule() -> None:
+    request = ProductPreviewRequest(
+        product="紅葉束口袋－黑",
+        placement="置換下方圖騰",
+    )
+
+    prompt = add_product_reference_instructions(
+        build_product_mockup_prompt(request, 0),
+        request,
+        reference_role="target",
+    )
+
+    assert "exact black Hongye drawstring pouch" in prompt
+    assert "very bottom of the visible pouch front is the only edit area" in prompt
+    assert "from the left edge to the right edge" in prompt
+    assert "Preserve Image B's original\n  colors and design as faithfully as possible" in prompt
+    assert "black pouch body and its color and texture" in prompt
+    assert 'white "1968" and "UNINANG" text' in prompt
+    assert "drawstrings and knots" in prompt
+    assert "central red\n  maple-leaf embroidery and turquoise veins" in prompt
+    assert "outside the original bottom horizontal motif band" in prompt
+    assert "ivory-white pouch body" not in prompt
+
+
 def test_phone_lanyard_always_uses_the_entire_strap_as_motif_band() -> None:
     request = ProductPreviewRequest(
         product="圖騰織帶手機掛繩",
@@ -293,14 +540,24 @@ def test_only_current_product_preview_options_are_enabled() -> None:
     assert set(PRODUCT_OPTIONS) == {
         "托特包",
         "黑色托特包",
+        "紅葉托特包－白",
+        "紅葉托特包－黑",
         "帆布袋",
         "黑色帆布袋",
+        "紅葉帆布袋－白",
+        "紅葉帆布袋－黑",
         "束口袋",
         "黑色束口袋",
+        "紅葉束口袋－白",
+        "紅葉束口袋－黑",
         "午餐袋",
         "黑色午餐袋",
+        "紅葉午餐袋－白",
+        "紅葉午餐袋－黑",
         "飲料提袋",
         "黑色飲料袋",
+        "紅葉飲料提袋－白",
+        "紅葉飲料提袋－黑",
         "環形鑰匙圈",
         "黑色環形鑰匙圈",
         "台灣高中生側背書包",
@@ -326,6 +583,8 @@ def test_only_current_product_preview_options_are_enabled() -> None:
         "置換兩側飾帶圖騰",
         "置換左右袖口圖騰",
         "置換衣服下方圖騰",
+        "置換三處圖騰",
+        "置換提帶及袋身兩側圖騰",
         "肩帶",
         "提袋處",
         "提袋",

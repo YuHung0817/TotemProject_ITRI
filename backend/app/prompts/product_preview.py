@@ -15,17 +15,27 @@ PRODUCT_OPTIONS = {
     # "背心": "sleeveless open-front vest with a V-shaped neckline",
     "托特包": "canvas tote bag",
     "黑色托特包": "the exact black structured tote bag shown in Image A",
+    "紅葉托特包－白": "the exact ivory-white structured Hongye tote bag shown in Image A",
+    "紅葉托特包－黑": "the exact black structured Hongye tote bag shown in Image A",
     "帆布袋": (
         "simple lightweight flat canvas shopping bag with a tall rectangular body, "
         "two long narrow fabric handles, an open top, and no rigid structure"
     ),
     "黑色帆布袋": "the exact black canvas shopping bag shown in Image A",
+    "紅葉帆布袋－白": "the exact white Hongye canvas tote bag shown in Image A",
+    "紅葉帆布袋－黑": "the exact black Hongye canvas tote bag shown in Image A",
     "束口袋": "drawstring bag",
     "黑色束口袋": "the exact black drawstring bag shown in Image A",
+    "紅葉束口袋－白": "the exact ivory-white Hongye drawstring pouch shown in Image A",
+    "紅葉束口袋－黑": "the exact black Hongye drawstring pouch shown in Image A",
     "午餐袋": "insulated lunch bag with a structured fabric body, zippered top opening, and carrying handles",
     "黑色午餐袋": "the exact black insulated lunch bag shown in Image A",
+    "紅葉午餐袋－白": "the exact ivory-white Hongye insulated lunch bag shown in Image A",
+    "紅葉午餐袋－黑": "the exact black Hongye insulated lunch bag shown in Image A",
     "飲料提袋": "reusable single-cup beverage carrier bag with a fabric main body wrapping the drink cup and a long narrow carrying handle",
     "黑色飲料袋": "the exact black single-cup beverage carrier shown in Image A",
+    "紅葉飲料提袋－白": "the exact white Hongye single-cup beverage carrier shown in Image A",
+    "紅葉飲料提袋－黑": "the exact black Hongye single-cup beverage carrier shown in Image A",
     "環形鑰匙圈": "loop key fob with one folded strap, one metal rivet, and one silver split key ring",
     "黑色環形鑰匙圈": "the exact black woven loop key fob shown in Image A",
     "台灣高中生側背書包": (
@@ -103,6 +113,16 @@ PLACEMENT_OPTIONS = {
     "置換衣服下方圖騰": (
         "replace only the existing wide horizontal motif band across the lower front of "
         "the shirt with the uploaded motif"
+    ),
+    "置換三處圖騰": (
+        "replace only the three existing black-and-white decorative motif bands: the long "
+        "front-facing handle strip, the upper horizontal cup-sleeve band, and the lower "
+        "horizontal cup-sleeve band"
+    ),
+    "置換提帶及袋身兩側圖騰": (
+        "replace only the two continuous decorative woven bands that run symmetrically "
+        "along the left and right handles and continue vertically down the bag body to "
+        "the bottom edge"
     ),
     "提袋處": "on the visible front-facing carrying handle / shoulder strap of the tote bag. Apply the "
     "motif as one continuous textile strip running along the direction of the handle. The "
@@ -326,14 +346,24 @@ DISPLAY_STYLE_OPTIONS = {
 PRODUCT_PLACEMENT_OPTIONS = {
     "托特包": ["AI自動決定位置", "袋子中央", "提袋處"],
     "黑色托特包": ["AI自動決定位置", "袋子中央", "提袋處"],
+    "紅葉托特包－白": ["置換提帶及袋身兩側圖騰"],
+    "紅葉托特包－黑": ["置換提帶及袋身兩側圖騰"],
     "帆布袋": ["AI自動決定位置", "袋子中央", "提袋處"],
     "黑色帆布袋": ["AI自動決定位置", "袋子中央", "提袋處"],
+    "紅葉帆布袋－白": ["置換提帶及袋身兩側圖騰"],
+    "紅葉帆布袋－黑": ["置換提帶及袋身兩側圖騰"],
     "束口袋": ["AI自動決定位置", "袋子中央"],
     "黑色束口袋": ["AI自動決定位置", "袋子中央"],
+    "紅葉束口袋－白": ["置換下方圖騰"],
+    "紅葉束口袋－黑": ["置換下方圖騰"],
     "午餐袋": ["AI自動決定位置", "袋子中央", "提袋"],
     "黑色午餐袋": ["AI自動決定位置", "袋子中央", "提袋"],
+    "紅葉午餐袋－白": ["置換下方圖騰"],
+    "紅葉午餐袋－黑": ["置換下方圖騰"],
     "飲料提袋": ["袋身／杯套本體", "提把／提帶"],
     "黑色飲料袋": ["袋身／杯套本體", "提把／提帶"],
+    "紅葉飲料提袋－白": ["置換三處圖騰"],
+    "紅葉飲料提袋－黑": ["置換三處圖騰"],
     "環形鑰匙圈": ["圖騰取代皮革帶"],
     "黑色環形鑰匙圈": ["圖騰取代皮革帶"],
     "台灣高中生側背書包": ["AI自動決定位置", "翻蓋偏下方", "肩帶"],
@@ -400,6 +430,9 @@ STRICT HONGYE BAG BOTTOM-MOTIF REPLACEMENT LOCK:
 - Replace that existing bottom band only with Image B, the uploaded motif.
 - Fit Image B into the same long horizontal band footprint, boundaries, width, height, fabric surface, folds, lighting, and perspective.
 - Preserve {preserved_details}, seams, edges, strap, buckle, rings, hardware, silhouette, camera angle, and background exactly as shown in Image A.
+- Keep the complete bag and the complete shoulder-strap loop fully inside the canvas. The strap apex, bag bottom, and both side edges must all remain visible.
+- Zoom out enough to leave a clear background margin on all four sides. The full product, including its strap, must occupy no more than approximately 85% of the image height.
+- Never use a close-up composition and never crop the strap apex, bag bottom, side edges, or any hardware. Framing takes priority over matching Image A's product scale.
 - Do not place the uploaded motif above the original bottom band, on the text or maple leaf, on the strap, or anywhere else.
 - Do not retain, duplicate, or overlay the original black-and-white geometric design after replacement.
 """.rstrip()
