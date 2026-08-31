@@ -1,7 +1,6 @@
 # Safu 管理者維運手冊
 
-本手冊供未來接手 `https://safu-studio.com` 的管理者使用，內容以目前 repository
-內的設定為準：單一 AWS EC2、Ubuntu、Nginx、systemd、FastAPI、React、SQLite，
+內容以目前 repository內的設定為準：單一 AWS EC2、Ubuntu、Nginx、systemd、FastAPI、React、SQLite，
 圖片與資料庫位於獨立資料目錄。若正式主機的路徑或網域已變更，請先同步更新本手冊。
 
 本手冊負責「EC2 已上線後」的日常操作與故障處理。第一次建立 EC2、正式環境變數、DNS／HTTPS，以及本機版本發布至 EC2 的完整順序，以 [EC2 部署文件](deployment.md) 為準。本手冊第 2 節保留部署時需要的維運檢查，作為主機端操作 runbook。
@@ -22,7 +21,7 @@
 | 健康檢查 | `https://safu-studio.com/api/v1/health` |
 
 日常管理建議透過 AWS Systems Manager Session Manager 進入 EC2。Security Group
-只應公開 80、443，不應公開 8000；22 若非必要也不要公開。
+只公開 80、443，不公開 8000。
 
 ## 2. 更新 code 後部署到 EC2
 
@@ -36,10 +35,6 @@ sudo git status --short
 sudo git branch --show-current
 sudo git log -1 --oneline
 ```
-
-`git status --short` 應沒有輸出。若有不明的主機端修改，先停止，不要用 reset 或
-checkout 覆蓋；先確認修改來源。依目前營運決策，正式 DB 與圖片不建立備份；部署或
-主機故障造成資料遺失時，以重新部署、migration 與重建帳號恢復服務。
 
 ### 2.2 執行部署
 
@@ -160,7 +155,7 @@ API usage 和 sessions。`pending`、`running` 的 generation job 不會被定�
 
 ## 4. 忘記密碼
 
-系統不提供 email 忘記密碼功能。管理者需透過 Session Manager 進入 EC2，在終端執行：
+系統不提供 email 忘記密碼功能，所以管理者需透過 Session Manager 進入 EC2，在終端執行：
 
 ```bash
 sudo -u safu bash -c 'set -a; source /etc/safu/safu.env; set +a; cd /opt/safu/backend; ../.venv/bin/python -m app.manage_user reset-password'
@@ -225,7 +220,7 @@ sudo -u safu sqlite3 /srv/safu-data/app.db ".schema users"
 
 請勿把整份 DB、prompt、password hash、session ID 或使用者資料貼到公開位置。
 
-## 6. 每月例行檢查
+## 6. 例行檢查
 
 ```bash
 sudo systemctl is-active safu-api nginx safu-cleanup.timer
@@ -237,6 +232,4 @@ sudo journalctl --disk-usage
 sudo certbot renew --dry-run
 ```
 
-另確認 EC2/EBS 狀態、HTTPS 到期日、SSM 可登入、Parameter Store 金鑰可讀，並重新
-確認是否仍接受不備份及故障後重建的營運決策。若營運開始要求復原歷史資料，需另行
-建立異地備份並定期演練還原流程。
+另確認 EC2/EBS 狀態、HTTPS 到期日、SSM 可登入、Parameter Store 金鑰可讀。
