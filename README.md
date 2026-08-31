@@ -6,7 +6,7 @@
 
 ## 專案概覽
 
-Totem 是為單一商家打造的手機優先網站。使用者登入後，可以用中文描述設計概念、選擇布農文化相關元素與配色，透過 OpenAI 產生圖騰，再修改元素、顏色或商品載體，並保存至聊天室、圖片庫與收藏圖版。
+Totem 是為單一商家打造的設計網站。使用者登入後，可以用中文描述設計概念、選擇布農文化相關元素與配色，透過 OpenAI 產生圖騰，再修改元素、顏色或商品載體，並保存至聊天室、圖片庫與收藏圖版。
 
 目前系統包含：
 
@@ -20,7 +20,7 @@ Totem 是為單一商家打造的手機優先網站。使用者登入後，可�
 - 14 天資料保存、到期清理與磁碟容量保護
 - AWS EC2、Nginx、systemd、SQLite 與加密 EBS 部署
 
-本專案不是公開註冊的多租戶 SaaS。現行架構的前提是單一商家、單一後端 worker、低至中度流量、資料預設只保留 14 天。
+本專案現行架構的前提是單一商家、單一後端 worker、低至中度流量、資料預設只保留 14 天。
 
 ## 核心使用流程
 
@@ -41,8 +41,6 @@ Pillow 統一色票並建立輔助圖
   ↓
 到期前下載；預設 14 天後清理
 ```
-
-生成與修改是同一套資料流程。不要只修改前端顯示而忽略 `generation_jobs`、聊天室 exchange、圖片 record、asset ownership、到期時間與冪等規則。
 
 ## 系統架構
 
@@ -77,7 +75,7 @@ Browser
 | Storage | 本機／EBS 圖片目錄；圖片透過需登入與 ownership 驗證的 route 提供 |
 | Production | AWS EC2、Nginx、systemd、Gunicorn/Uvicorn、SSM Parameter Store |
 
-目前不需要 RDS、S3、Load Balancer 或多台 EC2。只有在多商家、多 worker、長期保存、不可停機或資料不可遺失時，才應重新評估架構。
+目前不使用 RDS、S3、Load Balancer 或多台 EC2。
 
 ## Repository 結構
 
@@ -166,7 +164,7 @@ Copy-Item .env.example .env
 .\scripts\setup.ps1
 ```
 
-接著編輯 `.env`。不要把 `.env` 或真正的 API key commit 到 Git。完整步驟、更新 dependencies、重設密碼與本機資料位置請見 [本機開發環境安裝與操作](docs/local-development.md)。
+接著編輯 `.env`。完整步驟、更新 dependencies、重設密碼與本機資料位置請見 [本機開發環境安裝與操作](docs/local-development.md)。
 
 ## 啟動開發環境
 
@@ -224,7 +222,6 @@ Copy-Item .env.example .env
 | `LOGIN_FAILURE_LIMIT` | 同一來源與帳號在時間窗內可失敗次數 | 預設 5 |
 | `LOGIN_FAILURE_WINDOW_MINUTES` | 登入失敗計數時間窗 | 預設 15 分鐘 |
 
-`VITE_*` 變數會進入瀏覽器 bundle，絕對不可包含 OpenAI key、AWS secret、Session secret 或其他機密。正式主機的實際值不應寫回 repository。
 
 ## AI 生成流程
 
@@ -260,8 +257,6 @@ Pillow 將結果統一至同一目標色票
 3. 前端 `public/carrier-cards/` 的選擇卡片。
 4. 商品 reference routing 與 prompt tests。
 5. 前端 production build 與一次實際商品生成。
-
-AI 輸出不是完全確定性的。文化元素辨識、色彩、商品位置與完整商品構圖仍可能需要人工驗收。
 
 ## API 概覽
 
@@ -316,7 +311,7 @@ image_records ── parent_image_id ──> image_records
 | `api_usage` | 用量計算與生成結果摘要 |
 | `generation_jobs` | 冪等、active lock、工作與結果狀態 |
 
-修改 schema 時必須新增 Alembic migration，不可直接修改 production SQLite table。正式資料與圖片位置請參考 [維運手冊](docs/operations-runbook.md)。
+正式資料與圖片位置請參考 [維運手冊](docs/operations-runbook.md)。
 
 ### 圖片 record、asset 與到期生命週期
 
@@ -358,14 +353,6 @@ npm.cmd run build
 Pop-Location
 ```
 
-2026-08-10 本機基準：
-
-- 後端：85 tests passed
-- Ruff：通過
-- TypeScript 與 Vite production build：通過
-
-2026-08-11 已完成正式 EC2 的網路、HTTPS、Cookie、服務重啟、Parameter Store／IAM、log、前端 bundle、generation job 恢復、手機版面、到期清理、cleanup timer 與磁碟容量保護驗收。CI 與前端自動測試依目前單人、單一商家模式決定暫不導入；完整證據與重新評估條件見 [專案完成度與上線準備清單](docs/project-readiness-checklist.md)。
-
 ## 正式部署
 
 正式環境目前採：
@@ -399,7 +386,7 @@ curl -fsS https://safu-studio.com/api/v1/health
 sudo journalctl -u safu-api --since "10 minutes ago" --no-pager
 ```
 
-部署失敗處理、migration、日誌與 rollback 注意事項請依照 [維運手冊](docs/operations-runbook.md)，不要自行用 `git reset --hard`、直接覆蓋運作中的 SQLite，或任意執行 `alembic downgrade`。目前營運決策是不保留正式 DB／圖片備份；`git pull` 只能恢復程式碼，無法恢復既有帳號或資料。
+部署失敗處理、migration、日誌與 rollback 注意事項請依照 [維運手冊](docs/operations-runbook.md)。
 
 ## 日常維護
 
@@ -419,7 +406,6 @@ sudo journalctl -u safu-api --since "10 minutes ago" --no-pager
 - 本機開發：由開發者視需要手動執行 dry-run，再確認是否實際清理。完整命令見 [本機到期資料清理](docs/local-development.md#9-到期資料清理)。
 - EC2 正式環境：由 `safu-cleanup.timer` 定期啟動 `safu-cleanup.service`，不需要管理者每天手動執行。檢查、dry-run 與手動觸發方式見 [維運手冊的資料清理章節](docs/operations-runbook.md#4-檢查與執行資料清理)。
 
-兩個環境都不可用手動刪除圖片檔案取代 cleanup 程式，否則 database 與檔案狀態可能不一致。本機 cleanup 只處理本機資料；不會清除或影響 EC2。
 
 ### 每月檢查
 
@@ -433,16 +419,6 @@ sudo journalctl -u safu-api --since "10 minutes ago" --no-pager
 
 操作命令與故障排除步驟見 [維運手冊](docs/operations-runbook.md)。
 
-## 安全界線
-
-- `.env`、API key、Cookie、Session token、密碼與 AWS credentials 不得進 Git。
-- OpenAI key 不得放入 `VITE_*` 變數，否則會進入瀏覽器 bundle。
-- Production 不直接保存明文 `OPENAI_API_KEY`；使用 SSM SecureString 與最小權限 instance role。
-- Security Group 只公開 80／443；8000、5173、SQLite 不得對公網開放。
-- Production 必須使用 HTTPS、`SESSION_COOKIE_SECURE=true` 與正式 Origin allowlist。
-- 圖片 route 必須維持登入、ownership、刪除狀態與到期驗證。
-- Log 不得輸出完整 Prompt、request body、圖片內容、Token、Cookie 或 traceback 給前端。
-
 ## 已知限制與未完成事項
 
 - 圖片生成目前是同步請求；單一 worker 與 300 秒 timeout 適用目前低流量模式。
@@ -452,8 +428,6 @@ sudo journalctl -u safu-api --since "10 minutes ago" --no-pager
 - AI 圖片可能偶爾出現錯誤色彩、商品位置或文化元素表現，需要人工檢查。
 - 目前未導入 CI、前端自動測試或主動監控告警；是否需要依使用規模與停機容忍度重新評估。
 - 正式環境不保留 DB／圖片備份；專案負責人接受 EC2／EBS 故障後永久失去既有資料，改以重新部署、migration 與重建帳號恢復服務。
-
-未完成項目、必要性、完成標準與證據請以 [專案完成度與上線準備清單](docs/project-readiness-checklist.md) 為準。已修正問題由 Git 歷史與自動測試保存，不另外維護容易過期的修正紀錄文件。
 
 ## 文件索引
 
@@ -467,14 +441,3 @@ sudo journalctl -u safu-api --since "10 minutes ago" --no-pager
 | [專案完成度清單](docs/project-readiness-checklist.md) | 判斷還需做什麼、是否完成及完成證據 |
 | [歷史 EC2 規劃](docs/archive/ec2-single-store-deployment-plan.md) | 查詢早期架構、實作順序與風險決策；不作為目前狀態依據 |
 | [舊版 README 備份](README-backup-waitfordelete.md) | 暫時查詢尚未確認搬移的舊內容；確認完成後刪除 |
-
-## 接手者第一天建議順序
-
-1. 閱讀本文件的專案概覽、架構與安全界線。
-2. 依本機開發文件執行 bootstrap、migration、帳號初始化與 `dev.ps1`，確認可登入並載入網站。
-3. 跑完後端測試、Ruff 與前端 build。
-4. 閱讀 `backend/app/db/models.py` 與主要 `services/`，理解資料生命週期。
-5. 閱讀部署與維運手冊，但在取得正式權限前不要修改 EC2。
-6. 查看專案完成度清單，先處理 P0，再新增產品功能。
-
-若這六步都能完成，接手者就應能安全地開始修改與維護本專案。
