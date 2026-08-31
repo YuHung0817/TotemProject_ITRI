@@ -4,9 +4,9 @@
 
 本文件只說明正式 AWS EC2 環境。Windows 本機工具安裝、database migration、測試帳號與開發啟動方式請見 [本機開發環境](local-development.md)。本機與 EC2 的設定、database、圖片及帳號彼此獨立，不會自動同步。
 
-## 第一次部署
+## 部署
 
-先將 repository 放到 `/opt/safu`：
+將 repository 放到 `/opt/safu`：
 
 ```bash
 sudo mkdir -p /opt/safu
