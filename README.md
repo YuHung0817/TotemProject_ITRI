@@ -436,6 +436,4 @@ sudo journalctl -u safu-api --since "10 minutes ago" --no-pager
 | [本機開發環境](docs/local-development.md) | Windows 安裝、migration、帳號、啟動、測試與取得新程式碼 |
 | [部署文件](docs/deployment.md) | 第一次部署、更新 EC2、設定 DNS 與 HTTPS |
 | [管理者維運手冊](docs/operations-runbook.md) | 日常維護、日誌、清理、密碼與故障處理 |
-| [專案完成度清單](docs/project-readiness-checklist.md) | 判斷還需做什麼、是否完成及完成證據 |
 | [歷史 EC2 規劃](docs/archive/ec2-single-store-deployment-plan.md) | 查詢早期架構、實作順序與風險決策；不作為目前狀態依據 |
-| [舊版 README 備份](README-backup-waitfordelete.md) | 暫時查詢尚未確認搬移的舊內容；確認完成後刪除 |
