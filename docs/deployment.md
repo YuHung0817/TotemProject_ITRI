@@ -1,4 +1,4 @@
-# AWS EC2 部署（不使用 Docker）
+# AWS EC2 部署
 
 目前使用 Ubuntu 24.04 LTS。Security Group 只公開 80、443；不要對外開放 22、8000。管理 EC2 使用 AWS Systems Manager Session Manager。
 
