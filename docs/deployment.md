@@ -1,10 +1,8 @@
 # AWS EC2 部署（不使用 Docker）
 
-建議使用 Ubuntu 24.04 LTS。Security Group 只公開 80、443；不要對外開放 22、8000。管理 EC2 使用 AWS Systems Manager Session Manager。
+目前使用 Ubuntu 24.04 LTS。Security Group 只公開 80、443；不要對外開放 22、8000。管理 EC2 使用 AWS Systems Manager Session Manager。
 
 本文件只說明正式 AWS EC2 環境。Windows 本機工具安裝、database migration、測試帳號與開發啟動方式請見 [本機開發環境](local-development.md)。本機與 EC2 的設定、database、圖片及帳號彼此獨立，不會自動同步。
-
-目前 production 使用 `https://safu-studio.com`，EC2 以 Nginx、systemd、SQLite 與獨立加密 EBS volume 運行。前端採手機優先響應式版面；部署後需以實機驗證不同螢幕寬度、登入、生成、切換聊天室、圖片顯示與下載。
 
 ## 第一次部署
 
