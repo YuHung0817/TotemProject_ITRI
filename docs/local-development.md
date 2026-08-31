@@ -204,8 +204,6 @@ Push-Location backend
 Pop-Location
 ```
 
-不要用手動刪除圖片取代 cleanup，否則 database 與檔案狀態可能不一致。
-
 ## 10. 本機與 EC2 的界線
 
 | 本機開發 | EC2 正式環境 |
@@ -218,4 +216,4 @@ Pop-Location
 | 手動執行 migration | systemd 啟動 API 前自動 migration |
 | 本機測試帳號 | 獨立的正式商家帳號 |
 
-完成本機修改與驗證後，請依 [從本機更新至 EC2](deployment.md#從本機更新至-ec2) 的流程部署；不要複製本機 database、圖片或 `.env` 到正式環境。
+完成本機修改與驗證後，可以依 [從本機更新至 EC2](deployment.md#從本機更新至-ec2) 的流程部署。
