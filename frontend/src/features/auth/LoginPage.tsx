@@ -65,7 +65,7 @@ export function LoginPage({onLogin}:{onLogin:(user:User)=>void}) {
 
   return <main className="login-page">
     <form className="login-card" onSubmit={submit}>
-      <div className="login-mark">AI</div>
+      <div className="login-mark">SAFU</div>
       <h1>商家登入</h1>
       <p>請使用單一商家帳號登入</p>
       <label>帳號<input autoComplete="username" value={username} onChange={event=>setUsername(event.target.value)} onInvalid={event=>event.currentTarget.setCustomValidity("請輸入帳號")} onInput={event=>event.currentTarget.setCustomValidity("")} required/></label>
