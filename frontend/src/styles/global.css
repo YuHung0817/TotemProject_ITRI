@@ -298,6 +298,7 @@ html[data-image-hero-transition="close"]::view-transition-new(root) { animation:
 .detail-carrier-menu button:hover,.detail-carrier-menu button:focus-visible { background:#84B0FF; color:#fff; outline:0; }
 .detail-carrier-menu button:disabled { opacity:.38; cursor:not-allowed; }
 .detail-carrier-menu button small { margin-left:10px; color:#8a817b; font-size:10px; }
+.detail-carrier-separator { height:1px; margin:5px 6px; flex:0 0 auto; background:rgba(80,57,28,.18); }
 .detail-carrier-confirm-dialog p { margin-bottom:5px; font-weight:700; }
 .detail-carrier-confirm-close { position:absolute; top:12px; right:12px; width:36px; height:36px; }
 .detail-carrier-confirm-actions.single-action { grid-template-columns:1fr; }

@@ -42,12 +42,10 @@ from app.services.database_catalog_service import (
     save_records,
 )
 from app.services.image_generation import (
+    edit_motif_elements_with_image_model,
     generate_random_palette_variants,
-    palette_instruction_from_colors,
     recolor_existing_variant,
-    record_palette_colors,
     regenerate_from_record,
-    regenerate_palette_variant,
 )
 from app.services.generation_job_service import (
     acquire_generation_job,
@@ -1061,41 +1059,32 @@ def _regenerate_image(
     openai_client = client()
     try:
         previous_request = GenerateRequest(**old["request"])
+        previous_design_spec = old.get("design_spec") or {}
+        previous_elements = (
+            previous_design_spec.get("final_elements") or previous_request.elements
+        )
         resolution = resolve_motif_revision(
             openai_client,
             previous_request.prompt,
-            previous_request.elements,
+            previous_elements,
             old.get("palette_name"),
             revision.instruction,
-            (old.get("design_spec") or {}).get("excluded_elements", []),
+            previous_design_spec.get("excluded_elements", []),
         )
-        preserved_palette = record_palette_colors(old)
         request = GenerateRequest(
-            prompt="\n\n".join(
-                filter(
-                    None,
-                    [
-                        previous_request.prompt.strip(),
-                        "使用者針對上一張圖騰提出的修改要求：" + revision.instruction.strip(),
-                        "解析後的修改摘要：" + resolution.revision_summary.strip(),
-                    ],
-                )
-            ),
+            prompt=previous_request.prompt,
             elements=resolution.final_elements,
             excluded_elements=resolution.excluded_elements,
-            palette_instruction=(
-                resolution.palette_instruction
-                if resolution.changes_palette
-                else palette_instruction_from_colors(preserved_palette)
-            ),
+            palette_instruction=resolution.palette_instruction,
         )
-        new = regenerate_palette_variant(
-            openai_client,
+        new = edit_motif_elements_with_image_model(
+            old,
             request,
-            None if resolution.changes_palette else old.get("palette_name"),
-            None if resolution.changes_palette else preserved_palette,
+            revision.instruction,
+            resolution,
+            openai_client,
         )
-        new["design_spec"] = resolution.model_dump()
+        new.pop("_used_image_api", None)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:

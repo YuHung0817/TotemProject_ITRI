@@ -246,7 +246,7 @@ Pillow 將結果統一至同一目標色票
 
 ### 修改模式
 
-- 更換元素：Revision Resolver 先建立結構化 Design Spec，再編譯新 Prompt。
+- 更換元素：Revision Resolver 先更新結構化 Design Spec，再將上一版圖騰與元素修改要求交給 Image API 編輯；新元素可帶入新顏色，成品完成後重新擷取實際 RGB 色盤。
 - 更換配色：解析信心達門檻時使用 Pillow 換色，否則改用 Image API。
 - 原組合重新生成：沿用 record 內保存的完整 Prompt 與實際色票。
 - 更換商品圖：保留圖騰，以內建商品參考圖或自然語言要求生成商品預覽。

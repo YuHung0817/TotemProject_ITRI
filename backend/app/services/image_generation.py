@@ -14,7 +14,7 @@ from PIL import Image
 from app.core.config import get_settings
 from app.core.console import safe_print
 from app.prompts.options import PALETTE_COLORS
-from app.schemas.image import GenerateRequest
+from app.schemas.image import GenerateRequest, MotifRevisionResolution
 from app.services.storage_service import image_path, image_url
 from app.services.image_processing import (
     crop_horizontal_background_margin,
@@ -102,7 +102,7 @@ def record_palette_colors(record: dict[str, Any]) -> list[tuple[int, int, int]]:
         if len(item.get("rgb", [])) == 3
     ]
     if colors:
-        return colors[:5]
+        return colors[:8]
     palette_name = record.get("palette_name")
     if palette_name in PALETTE_COLORS:
         return list(PALETTE_COLORS[palette_name])
@@ -335,6 +335,90 @@ def regenerate_palette_variant(
         "score": None,
         "score_reason": None,
         **self_contained_fields(request, prompt, source, filename, original_filename),
+    }
+
+
+def edit_motif_elements_with_image_model(
+    old: dict[str, Any],
+    request: GenerateRequest,
+    user_instruction: str,
+    resolution: MotifRevisionResolution,
+    client: OpenAI,
+) -> dict[str, Any]:
+    """Edit the previous motif image and persist the resolved design state."""
+    source_path = image_path(old["original_filename"])
+    edit_prompt = f"""Edit the uploaded Bunun-inspired flat totem artwork according to the user's request.
+
+User request:
+{user_instruction.strip()}
+
+Structured revision (authoritative for element additions and removals):
+- Add: {json.dumps(resolution.added_elements, ensure_ascii=False)}
+- Remove: {json.dumps(resolution.removed_elements, ensure_ascii=False)}
+- Explicitly excluded: {json.dumps(resolution.excluded_elements, ensure_ascii=False)}
+- Final intended element set: {json.dumps(resolution.final_elements, ensure_ascii=False)}
+- Revision summary: {resolution.revision_summary.strip()}
+
+Editing rules:
+- Use the uploaded image as the source of truth and edit it instead of creating an unrelated redesign.
+- Add and remove the requested motif elements clearly. Do not reintroduce excluded elements.
+- Preserve unaffected elements, composition, geometry, outlines, symmetry, spacing, canvas size,
+  and flat illustration style as closely as possible.
+- Preserve unaffected colors as closely as possible. Newly added elements may introduce suitable new
+  flat colors. Follow any explicit color request from the user.
+- Keep colors solid and distinct. Do not introduce gradients, shadows, highlights, photorealistic
+  texture, depth, text, signatures, or unrequested decorative details.
+- Return one complete edited totem artwork, not a comparison, collage, or explanation."""
+    with source_path.open("rb") as image_file:
+        response = client.images.edit(
+            model=DEFAULT_MODEL,
+            image=image_file,
+            prompt=edit_prompt,
+            size=GENERATION_SIZE,
+            quality=DEFAULT_QUALITY,
+            output_format="png",
+        )
+    image_data = response.data[0]
+    if not image_data.b64_json:
+        raise RuntimeError("Image API did not return edited motif image data.")
+
+    edited = Image.open(BytesIO(base64.b64decode(image_data.b64_json))).convert("RGB")
+    image_id = uuid.uuid4().hex[:12]
+    filename, original_filename = save_source_image(edited, image_id, crop_margin=False)
+    return {
+        "id": image_id,
+        "filename": filename,
+        "url": image_url(filename),
+        "original_filename": original_filename,
+        "original_url": image_url(original_filename),
+        "totem_url": image_url(filename),
+        "created_at": utc_timestamp(),
+        "prompt": user_instruction.strip(),
+        "revised_prompt": getattr(image_data, "revised_prompt", None),
+        "totem_prompt": edit_prompt,
+        "request": request.model_dump(),
+        "assets": {
+            "motif": {
+                "type": "motif",
+                "filename": filename,
+                "url": image_url(filename),
+                "saved": False,
+                "favorite": False,
+                "parameters": None,
+            }
+        },
+        "palette_name": "成品實際配色",
+        "score": None,
+        "score_reason": None,
+        "files": {"repeat": filename, "original": original_filename},
+        "generation": {
+            "user_prompt": request.prompt,
+            "elements": list(request.elements),
+            "compiled_prompt": edit_prompt,
+        },
+        "palette": palette_record(edited, color_count=8),
+        "design_spec": resolution.model_dump(),
+        "_used_image_api": True,
     }
 
 
