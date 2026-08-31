@@ -53,10 +53,10 @@ IMAGE_MIN_FREE_BYTES=2147483648
 IMAGE_MIN_FREE_PERCENT=20
 ```
 
-正式環境禁止直接設定 `OPENAI_API_KEY`。請先在同一 AWS Region 的 Systems Manager
+目前是在同一 AWS Region 的 Systems Manager
 Parameter Store 建立 `/safu/production/openai-api-key` `SecureString`，並將只允許
 `ssm:GetParameter` 讀取該 parameter 的 IAM instance role 掛載至 EC2。後端會使用
-instance role 取得並解密金鑰，不需要在主機保存 AWS access key。
+instance role 取得並解密金鑰。
 
 圖片生成前會檢查 `/srv/safu-data/images` 所在 volume 的剩餘空間。預設至少保留
 2 GiB，且至少保留 volume 的 20%，兩者取較大；低於門檻時 API 會在呼叫付費圖片
@@ -79,7 +79,7 @@ sudo -u safu bash -c 'set -a; source /etc/safu/safu.env; set +a; cd /opt/safu/ba
 
 ## 從本機更新至 EC2
 
-完整流程是「本機修改與驗證 → Git commit／push → EC2 pull／部署 → 正式環境驗收」。不要用檔案總管、SCP 或複製本機 database 的方式局部覆蓋正式主機。
+完整流程是「本機修改與驗證 → Git commit／push → EC2 pull／部署 → 正式環境驗收」。
 
 ### 1. 在本機驗證修改
 
@@ -97,15 +97,13 @@ git status --short
 git diff --check
 ```
 
-確認 `.env`、database、圖片、API key 或其他秘密都沒有進入 Git。接著只加入本次修改範圍內的檔案，建立 commit 並 push 到團隊使用的 branch：
+建立 commit 並 push 到團隊使用的 branch：
 
 ```powershell
 git add <本次修改的檔案>
 git commit -m "描述本次修改"
 git push
 ```
-
-若團隊使用 Pull Request，必須先完成 review／CI 並合併至正式部署 branch，再繼續 EC2 步驟。不要把未驗證的個人 branch 直接部署至 production。
 
 ### 2. 進入 EC2 並確認狀態
 
@@ -150,18 +148,6 @@ sudo journalctl -u safu-api --since "10 minutes ago" --no-pager
 5. 若修改生成流程，再執行一次完整 AI 生成與結果下載。
 6. journal 與瀏覽器 response 沒有洩漏 Token、Cookie、Prompt 或內部錯誤。
 
-### 6. 部署失敗
-
-先保存狀態與 log：
-
-```bash
-sudo systemctl --no-pager --full status safu-api
-sudo journalctl -u safu-api -n 200 --no-pager
-sudo git -C /opt/safu log -5 --oneline
-```
-
-不要直接把舊 database 蓋回運作中的服務，也不要任意執行 `alembic downgrade`。程式碼與 schema migration 必須一起評估；詳細處理方式見 [管理者維運手冊](operations-runbook.md#24-部署失敗或需要回復)。
-
 ## 服務管理
 
 部署後的服務管理、日誌、磁碟、cleanup、密碼重設、database 查詢與每月檢查，統一以 [管理者維運手冊](operations-runbook.md) 為準。
@@ -177,4 +163,4 @@ sudo certbot --nginx -d safu-studio.com --redirect
 sudo certbot renew --dry-run
 ```
 
-Certbot 會互動詢問憑證通知信箱與服務條款，不要將信箱或終端內容中的敏感資料貼到公開位置。2026-08-11 已確認 14 天清理 timer、log retention 與磁碟容量保護正常；依目前單一商家、低流量及可接受延遲發現故障的條件，暫不建立 CloudWatch／SNS 主動告警。本專案採單一 EC2、SQLite 與本機圖片，不要求 RDS、S3 或資料備份。
+依目前單一商家、低流量的條件，因此暫不建立 CloudWatch／SNS 主動告警。本專案採單一 EC2、SQLite 與本機圖片，不要求 RDS、S3 或資料備份。
